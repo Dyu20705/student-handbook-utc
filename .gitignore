@@ -1,0 +1,5 @@
+rag_env/
+.ollama/
+*cache/
+*cache__/
+*chroma_db/
