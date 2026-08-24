@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo Cáo Nâng Cấp Hệ Thống RAG</title>
+</head>
+<body>
+    <div class="container">
+        <h1>BÁO CÁO NGHIÊN CỨU: NÂNG CẤP KIẾN TRÚC RAG</h1>
+        <p><strong>Tổng hợp từ:</strong> Corrective Retrieval Augmented Generation (CRAG)  & Advanced RAG Output Grading (ARAGOG)</p>
+        
+        <div class="highlight-box">
+            <p><strong>Mục tiêu:</strong> Trích xuất các phát hiện khoa học mới nhất từ hai báo cáo trên để thiết kế <strong>Step 6 (Tối ưu Truy xuất)</strong> và <strong>Step 7 (Tự động Sửa lỗi & Mở rộng)</strong> cho dự án RAG CLI cục bộ.</p>
+        </div>
+
+        <h2>1. Tri thức từ ARAGOG (Định hướng cho Step 6)</h2>
+        <p class="paper-ref">Nghiên cứu ARAGOG tập trung vào việc đánh giá thực nghiệm các kỹ thuật RAG tiên tiến để tìm ra phương pháp truy xuất tốt nhất.</p>
+        
+        <h3>Các kỹ thuật hiệu quả cao (Nên áp dụng):</h3>
+        <ul>
+            <li><strong>Sentence-Window Retrieval:</strong> Đây là kỹ thuật đạt hiệu quả cao nhất về độ chính xác truy xuất (Retrieval Precision). Phương pháp này tách biệt quá trình truy xuất và sinh văn bản: khi truy xuất, hệ thống dùng các khối dữ liệu rất nhỏ (từng câu đơn lẻ) để tìm cho trúng đích; nhưng khi đưa cho LLM, nó sẽ tự động lấy thêm các câu xung quanh (cửa sổ câu) để cung cấp ngữ cảnh đầy đủ.</li>
+            <li><strong>HyDE (Hypothetical Document Embeddings) kết hợp LLM Reranker:</strong> Sự kết hợp giữa HyDE và LLM Reranking mang lại hiệu quả tăng cường rõ rệt nhất cho độ chính xác truy xuất. HyDE sử dụng LLM để sinh ra một câu trả lời giả định trước, sau đó dùng câu trả lời này để đi tìm kiếm tài liệu. Việc dùng thêm LLM để chấm điểm lại (Reranking) giúp lọc kết quả chuẩn xác nhất.</li>
+            <li><strong>Document Summary Index:</strong> Việc lưu trữ và lập chỉ mục các bản tóm tắt tài liệu cũng được chứng minh là một cách tiếp cận có năng lực và rất hiệu quả.</li>
+        </ul>
+
+        <h3>Các kỹ thuật kém hiệu quả (Nên tránh/cân nhắc kỹ):</h3>
+        <ul>
+            <li><strong>Multi-query:</strong> Đáng ngạc nhiên là kỹ thuật tạo ra nhiều câu hỏi phụ (Multi-query) lại cho hiệu suất thấp hơn cả RAG cơ bản (Naive RAG).</li>
+            <li><strong>MMR (Maximal Marginal Relevance) & Cohere Rerank:</strong> Hai kỹ thuật này không cho thấy lợi thế đáng kể nào so với hệ thống RAG cơ bản.</li>
+        </ul>
+
+        <h2>2. Tri thức từ CRAG (Định hướng cho Step 7)</h2>
+        <p class="paper-ref">Nghiên cứu CRAG giải quyết điểm yếu chí mạng của RAG: LLM sẽ bị ảo giác (hallucination) nếu tài liệu được truy xuất bị sai hoặc không liên quan .</p>
+
+        <h3>Cơ chế tự sửa lỗi (Self-Correction):</h3>
+        <ul>
+            <li><strong>Retrieval Evaluator (Bộ đánh giá):</strong> CRAG đề xuất xây dựng một bộ đánh giá nhẹ để chấm điểm mức độ liên quan của tài liệu được trả về . Bộ đánh giá này sẽ phân loại tài liệu thành 3 nhóm hành động: <em>Correct (Đúng)</em>, <em>Incorrect (Sai)</em>, và <em>Ambiguous (Mơ hồ)</em> .</li>
+            <li><strong>Xử lý khi "Đúng" (Decompose-then-recompose):</strong> Ngay cả khi tài liệu được đánh giá là đúng, nó vẫn chứa thông tin thừa. CRAG chia nhỏ tài liệu này thành các dải thông tin (strips), lọc bỏ thông tin không liên quan và chỉ ghép lại những thông tin cốt lõi để đưa cho LLM .</li>
+            <li><strong>Xử lý khi "Sai" hoặc "Mơ hồ" (Web Search):</strong> Nếu các tài liệu nội bộ đều sai (Incorrect) hoặc không rõ ràng (Ambiguous), CRAG sẽ loại bỏ chúng và sử dụng công cụ tìm kiếm Web quy mô lớn để bổ sung tri thức . Các câu hỏi sẽ được viết lại (rewrite) thành các từ khóa để tối ưu hóa việc tìm kiếm trên Web .</li>
+        </ul>
+
+        <h2>3. Đề xuất Bản vẽ Thiết kế (Action Plan) cho Dự án</h2>
+        
+        <div class="action-plan">
+            <h3><span class="tag">Step 6</span> Nâng cấp "Động cơ" Truy xuất (Dựa trên ARAGOG)</h3>
+            <p><strong>Kiến trúc: Sentence-Window + HyDE</strong></p>
+            <ul>
+                <li><strong>Cấu trúc lại cơ sở dữ liệu:</strong> Thay đổi hàm `RecursiveCharacterTextSplitter` hiện tại thành cơ chế chia theo câu (Sentence Splitter). Đánh index cho từng câu, nhưng lưu trữ thêm metadata là 2 câu trước và 2 câu sau nó.</li>
+                <li><strong>Tích hợp HyDE:</strong> Trước khi đưa câu hỏi của bạn (ví dụ: <em>"Hệ thống đó dùng DB gì?"</em>) vào ChromaDB, dùng Qwen2.5 tự sinh ra một câu trả lời giả định. Mang câu trả lời giả định đó đi quét ChromaDB.</li>
+            </ul>
+
+            <h3><span class="tag">Step 7</span> Hệ thống Tự kiểm duyệt CRAG (Dựa trên CRAG)</h3>
+            <p><strong>Kiến trúc: LLM Evaluator + DuckDuckGo Web Search</strong></p>
+            <ul>
+                <li><strong>Bước 1 (Evaluator):</strong> Viết một Prompt Template yêu cầu Qwen2.5 đóng vai trò làm Giám khảo. Đưa câu hỏi và tài liệu truy xuất vào, yêu cầu Qwen2.5 trả về 1 trong 3 nhãn: <code>CORRECT</code>, <code>INCORRECT</code>, <code>AMBIGUOUS</code>.</li>
+                <li><strong>Bước 2 (Routing):</strong>
+                    <ul>
+                        <li>Nếu <code>CORRECT</code>: Tiếp tục đưa vào LLM để trả lời (Có thể kết hợp chia nhỏ câu để lọc rác).</li>
+                        <li>Nếu <code>INCORRECT</code>/<code>AMBIGUOUS</code>: Kích hoạt module <code>langchain-community DuckDuckGoSearchRun</code> (hoặc Tavily) để cào dữ liệu từ internet về đắp vào.</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
