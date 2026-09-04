@@ -27,7 +27,7 @@ done
 
 # 3. Kiểm tra Ollama models
 echo "🦙 Đang kiểm tra các model Ollama..."
-MODELS=("qwen2.5:7b" "nomic-embed-text")
+MODELS=("qwen2.5:3b" "qwen3-embedding:0.6b")
 
 for model in "${MODELS[@]}"; do
     if ollama list | grep -q "$model"; then

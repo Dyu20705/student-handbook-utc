@@ -15,8 +15,8 @@ from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-from step3_final import arise, load_system_prompt
-from ARAGOG import AragogRetriever
+from student_handbook_rag.chain import arise, load_system_prompt
+from student_handbook_rag.aragog import AragogRetriever
 
 
 class RetrievalEvaluator:
@@ -30,12 +30,8 @@ class RetrievalEvaluator:
         eval_prompt = ChatPromptTemplate.from_messages([
             ("system", 
              "Bạn là Giám khảo đánh giá dữ liệu RAG (Retrieval Evaluator).\n"
-             "Nhiệm vụ: Kiểm tra xem các đoạn tài liệu được cung cấp có chứa thông tin để trả lời câu hỏi hay không.\n\n"
-             "Tiêu chí:\n"
-             "- CORRECT: Nếu có ít nhất 1 đoạn tài liệu chứa thông tin chính xác giúp trả lời câu hỏi.\n"
-             "- AMBIGUOUS: Nếu tài liệu chỉ chứa một phần thông tin, mơ hồ hoặc chưa đầy đủ.\n"
-             "- INCORRECT: Nếu tất cả tài liệu đều hoàn toàn không liên quan đến câu hỏi.\n\n"
-             "Định dạng trả lời bắt buộc ở dòng đầu tiên:\n"
+             "Hãy kiểm tra xem nội dung tài liệu có chứa thông tin trả lời cho câu hỏi hay không.\n"
+             "Đầu tiên hãy giải thích ngắn gọn, sau đó ở dòng cuối cùng ghi rõ:\n"
              "Kết luận: [CORRECT / AMBIGUOUS / INCORRECT]"
             ),
             ("human", "Câu hỏi: {query}\n\nNội dung tài liệu:\n{context}")

@@ -10,7 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 
-from step3_final import createretriever, load_system_prompt, arise
+from student_handbook_rag.chain import createretriever, load_system_prompt, arise
 
 
 def load_mem_prompt():

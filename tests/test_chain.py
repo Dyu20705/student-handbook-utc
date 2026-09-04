@@ -1,5 +1,6 @@
 import pytest
-from step3_final import createretriever, arise, createprompt, createragchain
+from student_handbook_rag.chain import createretriever, arise, createprompt, createragchain
+from student_handbook_rag.config import LLM_MODEL
 
 def test_createretriever():
     retriever = createretriever()
@@ -9,7 +10,7 @@ def test_createretriever():
 def test_arise():
     llm = arise()
     assert llm is not None
-    assert llm.model == "qwen2.5:7b"
+    assert llm.model == LLM_MODEL
     assert llm.temperature == 0
 
 def test_createprompt():

@@ -1,17 +1,17 @@
-from step1_chunking import ragchunking, ragload
+import os
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_chroma import Chroma
 
-import os
+from student_handbook_rag.loader import ragchunking, ragload
+from student_handbook_rag.config import EMBEDDING_MODEL, CHROMA_DEFAULT_DIR, RAW_DATA_PATH
 
 def embes():
     print("embesnef!")
-    embedding = OllamaEmbeddings(model="nomic-embed-text")
+    embedding = OllamaEmbeddings(model=EMBEDDING_MODEL)
     return embedding
 
-def createvector():
+def createvector(persist_dir: str = CHROMA_DEFAULT_DIR):
     print("wordtovec -> save ChromaDb")
-    persist_dir = "./duy_chroma_db"
     embedding = embes()
     if os.path.exists(persist_dir) and os.listdir(persist_dir):
         vector_db = Chroma(
@@ -20,7 +20,7 @@ def createvector():
         )
     else:
         vector_db = Chroma.from_documents(
-            documents=ragchunking(ragload("handbook.txt")),
+            documents=ragchunking(ragload(RAW_DATA_PATH)),
             embedding=embedding,
             persist_directory=persist_dir # Lưu DB ra một thư mục trên ổ cứng
         )

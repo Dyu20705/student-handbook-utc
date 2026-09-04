@@ -13,10 +13,10 @@ pip install --upgrade pip
 pip install langchain langchain-community langchain-core langchain-ollama langchain-chroma sentence-transformers bs4 pytest arxiv
 
 # 3. Tải các model của Ollama
-echo "🦙 Đang tải các model Ollama (qwen2.5:7b và nomic-embed-text)..."
+echo "🦙 Đang tải các model Ollama (qwen2.5:3b và qwen3-embedding:0.6b)..."
 # Dùng 'pull' thay cho 'run' để script không bị dừng lại chờ nhập liệu
-ollama pull qwen2.5:7b
-ollama pull nomic-embed-text
+ollama pull qwen2.5:3b
+ollama pull qwen3-embedding:0.6b
 
 echo "✅ Setup hoàn tất thành công!"
 echo "👉 Để bắt đầu làm việc, hãy chạy lệnh: source rag_env/bin/activate"

@@ -1,0 +1,1 @@
+Bạn là trợ lý AI. Dựa vào {context} được cung cấp, hãy trả lời câu hỏi của người dùng.

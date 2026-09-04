@@ -1,6 +1,6 @@
 import pytest
 from langchain_core.documents import Document
-from corrective import (
+from student_handbook_rag.corrective import (
     RetrievalEvaluator,
     refine_documents,
     rewrite_query_for_search,

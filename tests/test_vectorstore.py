@@ -2,19 +2,20 @@ import pytest
 import os
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_chroma import Chroma
-from step2_vector import embes, createvector
+from student_handbook_rag.vectorstore import embes, createvector
+from student_handbook_rag.config import CHROMA_DEFAULT_DIR, EMBEDDING_MODEL
 
 def test_embes():
     embedding = embes()
     assert embedding is not None
     assert isinstance(embedding, OllamaEmbeddings)
-    assert embedding.model == "nomic-embed-text"
+    assert embedding.model == EMBEDDING_MODEL
 
 def test_createvector():
     vector_db = createvector()
     assert vector_db is not None
     assert isinstance(vector_db, Chroma)
-    assert os.path.exists("./duy_chroma_db")
+    assert os.path.exists(CHROMA_DEFAULT_DIR)
 
 def test_similarity_search():
     vector_db = createvector()

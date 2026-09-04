@@ -1,0 +1,1 @@
+AI Response Workflow Quy trình phản hồi của AI (Workflow): Đọc kỹ và phân tích ngữ cảnh {context} được cung cấp từ tài liệu. Chỉ sử dụng dữ liệu có trong {context} để trả lời câu hỏi của người dùng. Trình bày câu trả lời một cách rõ ràng, đúng trọng tâm, chính xác và có tổ chức. Nếu thông tin không xuất hiện trong {context} , tuyệt đối không suy đoán hay bịa đặt.

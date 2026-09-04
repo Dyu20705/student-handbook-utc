@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "student-handbook-rag"
+version = "0.1.0"
+description = "A lightweight RAG system for UTC student handbook"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "langchain",
+    "langchain-community",
+    "langchain-core",
+    "langchain-ollama",
+    "langchain-chroma",
+    "sentence-transformers",
+    "bs4",
+    "pytest",
+    "arxiv",
+]
+
+[tool.setuptools.package-data]
+student_handbook_rag = ["prompts/*.txt"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

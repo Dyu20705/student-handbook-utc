@@ -1,40 +1,49 @@
-import os
-import re
+import importlib.resources
 from pathlib import Path
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 from langchain_classic.chains import create_retrieval_chain
-from step2_vector import createvector
+
+from student_handbook_rag.vectorstore import createvector
+from student_handbook_rag.config import LLM_MODEL, TEMPERATURE, RETRIEVAL_K, PROMPTS_DIR
 
 # Đổi Vector DB thành một "Retriever" (Bộ truy xuất)
-def createretriever():
-    retriever = createvector().as_retriever(search_kwargs={"k": 2})
+def createretriever(k: int = RETRIEVAL_K):
+    retriever = createvector().as_retriever(search_kwargs={"k": k})
     return retriever
 
 # arise qwen2.5
 def arise():
-    print("Loading qwen2.5....")
-    llm = ChatOllama(model="qwen2.5:7b", temperature=0) # temperature=0 để nó trả lời chính xác, không sáng tạo bậy bạ
+    print(f"Loading {LLM_MODEL}....")
+    llm = ChatOllama(model=LLM_MODEL, temperature=TEMPERATURE) # temperature=0 để nó trả lời chính xác, không sáng tạo bậy bạ
     return llm
 
-# Tạo promt
-def load_system_prompt():
-    skills_dir = Path("skills")
-    skill_files = sorted(skills_dir.rglob("*.html")) if skills_dir.exists() else []
-
+# Tạo prompt từ package resources
+def load_system_prompt() -> str:
     prompts = []
-    for skill_file in skill_files:
-        if os.path.exists(skill_file):
+    # 1. Nạp qua importlib.resources (chuẩn package data)
+    try:
+        resource_dir = importlib.resources.files("student_handbook_rag").joinpath("prompts")
+        if resource_dir.is_dir():
+            for item in sorted(resource_dir.iterdir()):
+                if item.name.endswith(".txt"):
+                    content = item.read_text(encoding="utf-8").strip()
+                    if content:
+                        prompts.append(content)
+    except Exception:
+        pass
+
+    # 2. Fallback đường dẫn thư mục PROMPTS_DIR
+    if not prompts and PROMPTS_DIR.exists():
+        for prompt_file in sorted(PROMPTS_DIR.glob("*.txt")):
             try:
-                with open(skill_file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    clean_text = re.sub(r"<[^>]+>", " ", content)
-                    clean_text = re.sub(r"\s+", " ", clean_text).strip()
-                    if clean_text:
-                        prompts.append(clean_text)
+                content = prompt_file.read_text(encoding="utf-8").strip()
+                if content:
+                    prompts.append(content)
             except Exception:
                 pass
+
     if prompts:
         return "\n\n".join(prompts)
     return (

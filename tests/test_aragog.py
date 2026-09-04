@@ -1,6 +1,6 @@
 import pytest
 from langchain_core.documents import Document
-from ARAGOG import (
+from student_handbook_rag.aragog import (
     split_into_sentences,
     create_sentence_window_docs,
     get_aragog_vector_db,

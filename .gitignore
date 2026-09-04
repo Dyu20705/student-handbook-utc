@@ -3,3 +3,4 @@ rag_env/
 *cache/
 *cache__/
 *chroma_db/
+data/chroma/

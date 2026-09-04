@@ -9,7 +9,7 @@ if sys.path and sys.path[0] == script_dir:
 
 import arxiv
 
-def download_biblo(arxiv_id, save_dir="docs"):
+def download_biblo(arxiv_id, save_dir="docs/research"):
     print(f"download_biblo in arXiv ID: {arxiv_id} using 'arxiv' package...\n")
     
     # Construct the default API client.

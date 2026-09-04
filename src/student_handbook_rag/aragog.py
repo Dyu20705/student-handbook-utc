@@ -18,9 +18,17 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import CrossEncoder
 
-from step1_chunking import ragload
-from step2_vector import embes
-from step3_final import arise, load_system_prompt
+from student_handbook_rag.loader import ragload
+from student_handbook_rag.vectorstore import embes
+from student_handbook_rag.chain import arise, load_system_prompt
+from student_handbook_rag.config import (
+    RAW_DATA_PATH,
+    CHROMA_ARAGOG_DIR,
+    RERANKER_MODEL,
+    WINDOW_SIZE,
+    TOP_K_INITIAL,
+    TOP_N_FINAL,
+)
 
 
 def split_into_sentences(text: str) -> List[str]:
@@ -46,19 +54,19 @@ def create_sentence_window_docs(documents: List[Document], window_size: int = 2)
                 metadata={
                     "window": window_context,
                     "sentence_idx": i,
-                    "source": doc.metadata.get("source", "handbook.txt")
+                    "source": doc.metadata.get("source", RAW_DATA_PATH)
                 }
             )
             window_docs.append(new_doc)
     return window_docs
 
 
-def get_aragog_vector_db(db_path: str = "./aragog_chroma_db") -> Chroma:
+def get_aragog_vector_db(db_path: str = CHROMA_ARAGOG_DIR) -> Chroma:
     embedding = embes()
     if os.path.exists(db_path) and os.listdir(db_path):
         return Chroma(persist_directory=db_path, embedding_function=embedding)
-    raw_docs = ragload("handbook.txt")
-    window_docs = create_sentence_window_docs(raw_docs, window_size=2)
+    raw_docs = ragload(RAW_DATA_PATH)
+    window_docs = create_sentence_window_docs(raw_docs, window_size=WINDOW_SIZE)
     return Chroma.from_documents(
         documents=window_docs,
         embedding=embedding,
@@ -80,12 +88,12 @@ def generate_hypothetical_answer(query: str, llm=None) -> str:
 
 
 class AragogRetriever:
-    def __init__(self, vector_db: Chroma = None, reranker_model_name: str = "BAAI/bge-reranker-base"):
+    def __init__(self, vector_db: Chroma = None, reranker_model_name: str = RERANKER_MODEL):
         self.vector_db = vector_db or get_aragog_vector_db()
         self.llm = arise()
         self.reranker = CrossEncoder(reranker_model_name)
 
-    def retrieve(self, query: str, top_k_initial: int = 10, top_n_final: int = 3) -> List[Document]:
+    def retrieve(self, query: str, top_k_initial: int = TOP_K_INITIAL, top_n_final: int = TOP_N_FINAL) -> List[Document]:
         hypo_doc = generate_hypothetical_answer(query, self.llm)
         candidate_docs = self.vector_db.similarity_search(hypo_doc, k=top_k_initial)
         if not candidate_docs:
@@ -117,7 +125,7 @@ def create_aragog_rag_chain(retriever: AragogRetriever = None, llm=None):
         ("human", "{input}"),
     ])
     def run_chain(query: str):
-        docs = retriever.retrieve(query, top_k_initial=8, top_n_final=3)
+        docs = retriever.retrieve(query, top_k_initial=TOP_K_INITIAL, top_n_final=TOP_N_FINAL)
         context_text = "\n---\n".join([d.page_content for d in docs])
         chain = prompt | llm | StrOutputParser()
         answer = chain.invoke({"context": context_text, "input": query})
