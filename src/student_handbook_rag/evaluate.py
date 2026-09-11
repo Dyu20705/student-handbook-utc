@@ -12,15 +12,14 @@ import os
 import shutil
 import sys
 import time
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 from student_handbook_rag.config import (
     BENCHMARK_PATH,
-    CHROMA_BASELINE_DIR,
     RAW_DATA_PATH,
     DATA_DIR,
 )
-from student_handbook_rag.loader import ragload, ragchunking
+from student_handbook_rag.loader import ragload
 from student_handbook_rag.vectorstore import build_vector_store
 from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.chain import StudentHandbookRAG
@@ -203,9 +202,7 @@ def run_chunking_experiment(benchmark: List[Dict[str, Any]]) -> Dict[str, Any]:
     ]
 
     exp_results = []
-    print("\n" + "=" * 60)
-    print("🧪 RUNNING CHUNKING HYPERPARAMETER EXPERIMENT")
-    print("=" * 60)
+    print("\n=== Chunking Hyperparameter Experiment ===")
 
     docs = ragload(RAW_DATA_PATH)
 
@@ -281,9 +278,7 @@ def main():
     )
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("📊 STUDENT HANDBOOK RAG V1 — EVALUATION BENCHMARK")
-    print("=" * 60)
+    print("=== Student Handbook RAG - Evaluation Benchmark ===")
 
     benchmark = load_benchmark(args.benchmark_path)
     print(f"Loaded {len(benchmark)} questions from {args.benchmark_path}")
@@ -332,18 +327,16 @@ def main():
         results_data["detailed_qa"] = gen_metrics["detailed_qa"]
         results_data["detailed_refusals"] = gen_metrics["detailed_refusals"]
 
-        print("\n" + "=" * 60)
-        print("📈 GENERATION METRICS SUMMARY:")
+        print("\n--- Generation Metrics Summary ---")
         print(f"  Answer Correctness:       {gen_metrics['answer_correctness_rate'] * 100:.1f}%")
         print(f"  Citation Groundedness:    {gen_metrics['citation_groundedness_rate'] * 100:.1f}%")
         print(f"  Refusal on Unanswerable:  {gen_metrics['unanswerable_refusal_rate'] * 100:.1f}%")
-        print("=" * 60)
 
     # Save to JSON
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(results_data, f, ensure_ascii=False, indent=2)
-    print(f"\n💾 Evaluation results saved to: {args.output}")
+    print(f"\nEvaluation results saved to: {args.output}")
 
 
 if __name__ == "__main__":

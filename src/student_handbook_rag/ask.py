@@ -13,26 +13,21 @@ from student_handbook_rag.config import RETRIEVAL_K
 
 
 def print_response(result: dict, debug: bool = False, retriever: BaselineRetriever = None):
-    print("\n" + "=" * 60)
-    print("❓ CÂU HỎI:")
-    print(f"   {result['query']}")
-    print("=" * 60)
-    print("💡 CÂU TRẢ LỜI:")
-    print(f"   {result['answer']}")
-    print("\n📚 NGUỒN TRÍCH DẪN (SOURCES):")
+    print("\n--- Result ---")
+    print(f"Question: {result['query']}\n")
+    print(f"Answer:\n{result['answer']}\n")
+    print("Sources:")
     if result["sources"]:
         for s in result["sources"]:
-            print(f"   • {s['document']} | Trang PDF: {s['page']} (Trang in: {s['book_page']}) | Mục: {s['section']} | Score: {s['score']:.4f}")
+            print(f"  - {s['document']} | Page: {s['page']} (Book page: {s['book_page']}) | Section: {s['section']} | Score: {s['score']:.4f}")
     else:
-        print("   (Không có nguồn dẫn chứng)")
-    print("=" * 60)
+        print("  (No relevant sources found)")
 
     if debug:
-        print("\n🔍 DEBUG: CHI TIẾT CÁC CHUNK ĐƯỢC RETRIEVE:")
+        print("\n--- Debug: Retrieved Chunks ---")
         scored_pairs = [(doc, s["score"]) for doc, s in zip(result["retrieved_chunks"], result["sources"])]
         if retriever:
             print(retriever.format_retrieval_debug(result["query"], scored_pairs))
-        print("=" * 60)
 
 
 def main():
@@ -59,27 +54,27 @@ def main():
 
     args = parser.parse_args()
 
-    print("🤖 Đang khởi tạo Student Handbook RAG V1...")
+    print("[Init] Loading Student Handbook RAG...")
     retriever = BaselineRetriever(k=args.top_k)
     rag = StudentHandbookRAG(retriever=retriever)
-    print("✅ Hệ thống đã sẵn sàng!\n")
+    print("[Init] System ready.\n")
 
     if args.query:
         result = rag.query(args.query, k=args.top_k)
         print_response(result, debug=args.debug, retriever=retriever)
     else:
-        print("--- CHẾ ĐỘ HỎI ĐÁP TƯƠNG TÁC (Gõ 'exit' hoặc 'quit' để thoát) ---")
+        print("--- Interactive Mode (type 'exit' to quit) ---")
         while True:
             try:
-                user_input = input("\n👤 Bạn muốn hỏi gì: ").strip()
+                user_input = input("\nQuery: ").strip()
             except (KeyboardInterrupt, EOFError):
-                print("\nTạm biệt!")
+                print("\nGoodbye!")
                 break
 
             if not user_input:
                 continue
             if user_input.lower() in ["exit", "quit", "thoát"]:
-                print("Tạm biệt!")
+                print("Goodbye!")
                 break
 
             result = rag.query(user_input, k=args.top_k)

@@ -50,15 +50,12 @@ def main():
 
     args = parser.parse_args()
 
-    print("=" * 60)
-    print("🚀 STUDENT HANDBOOK RAG V1 — INGESTION PIPELINE")
-    print("=" * 60)
-    print(f"  Source Document:  {args.data_path}")
-    print(f"  Vector Store Dir: {args.persist_dir}")
-    print(f"  Chunk Size:       {args.chunk_size}")
-    print(f"  Chunk Overlap:    {args.chunk_overlap}")
-    print(f"  Force Rebuild:    {args.force}")
-    print("=" * 60)
+    print("=== Student Handbook RAG - Ingestion Pipeline ===")
+    print(f"Source Document:  {args.data_path}")
+    print(f"Vector Store Dir: {args.persist_dir}")
+    print(f"Chunk Size:       {args.chunk_size}")
+    print(f"Chunk Overlap:    {args.chunk_overlap}")
+    print(f"Force Rebuild:    {args.force}\n")
 
     start_time = time.time()
     try:
@@ -71,12 +68,10 @@ def main():
         )
         total_docs = vector_db._collection.count()
         duration = time.time() - start_time
-        print("=" * 60)
-        print(f"✅ Ingestion completed in {duration:.2f}s!")
-        print(f"📊 Total indexed chunks in collection: {total_docs}")
-        print("=" * 60)
+        print(f"\nIngestion completed in {duration:.2f}s.")
+        print(f"Total indexed chunks: {total_docs}")
     except Exception as e:
-        print(f"❌ Ingestion failed: {e}", file=sys.stderr)
+        print(f"Error: Ingestion failed: {e}", file=sys.stderr)
         sys.exit(1)
 
 
