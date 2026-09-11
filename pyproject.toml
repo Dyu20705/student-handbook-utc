@@ -18,6 +18,7 @@ dependencies = [
     "bs4",
     "pytest",
     "arxiv",
+    "pypdf",
 ]
 
 [tool.setuptools.package-data]

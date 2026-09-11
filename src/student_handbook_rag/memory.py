@@ -67,14 +67,28 @@ def get_session_history(session_id: str):
     return session_store[session_id]
 
 
-# Bọc chain vào lớp quản lý lịch sử trò chuyện
-conversational_rag = RunnableWithMessageHistory(
-    create_conversational_rag_chain(),
-    get_session_history,
-    input_messages_key="input",
-    history_messages_key="chat_history",
-    output_messages_key="answer",
-)
+class _LazyConversationalRag:
+    """Lazy proxy to avoid loading LLM/DB at import time."""
+    def __init__(self):
+        self._instance = None
+
+    def _get_instance(self):
+        if self._instance is None:
+            self._instance = RunnableWithMessageHistory(
+                create_conversational_rag_chain(),
+                get_session_history,
+                input_messages_key="input",
+                history_messages_key="chat_history",
+                output_messages_key="answer",
+            )
+        return self._instance
+
+    def invoke(self, *args, **kwargs):
+        return self._get_instance().invoke(*args, **kwargs)
+
+
+conversational_rag = _LazyConversationalRag()
+
 
 
 if __name__ == "__main__":
