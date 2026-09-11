@@ -2,7 +2,7 @@
 Encapsulates dense top-k similarity retrieval, score tracking, and debug formatting.
 """
 
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Tuple, Optional
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 

@@ -25,17 +25,15 @@ def resolve_data_path(filename: str = RAW_DATA_PATH) -> str:
     """Resolve data file path against project root and standard directories."""
     if os.path.exists(filename):
         return os.path.abspath(filename)
+
+    base = os.path.basename(filename)
     candidates = [
-        os.path.join(str(PROJECT_ROOT), "data", "raw", os.path.basename(filename)),
+        os.path.join(str(PROJECT_ROOT), "data", "raw", base),
         os.path.join(str(PROJECT_ROOT), "data", "raw", "sotaysvk67.pdf"),
         os.path.join(str(PROJECT_ROOT), "data", "raw", "Sổ tay SV K67.pdf"),
-        os.path.join(str(PROJECT_ROOT), "data", "raw", filename),
-        os.path.join("data", "raw", os.path.basename(filename)),
+        os.path.join(str(PROJECT_ROOT), filename),
+        os.path.join("data", "raw", base),
         os.path.join("data", "raw", "sotaysvk67.pdf"),
-        os.path.join("data", "raw", "Sổ tay SV K67.pdf"),
-        os.path.join("data", "raw", filename),
-        str(Path(__file__).resolve().parent.parent.parent / "data" / "raw" / os.path.basename(filename)),
-        str(Path(__file__).resolve().parent.parent.parent / filename),
     ]
     for candidate in candidates:
         if os.path.exists(candidate):
@@ -56,11 +54,9 @@ def clean_page_text(text: str) -> str:
     text = re.sub(r'(?i)\bSTSV\s*\*\s*\d+\b', '', text)
     text = re.sub(r'(?i)\b\d+\s*\*\s*STSV\b', '', text)
 
-    # Normalize weird whitespace characters
+    # Normalize whitespace
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     text = re.sub(r'[ \t]+', ' ', text)
-
-    # Remove more than 2 consecutive newlines
     text = re.sub(r'\n{3,}', '\n\n', text)
 
     return text.strip()
@@ -69,15 +65,10 @@ def clean_page_text(text: str) -> str:
 def detect_section_heading(text: str) -> Optional[str]:
     """Detect section or chapter heading in a page to maintain section context."""
     patterns = [
-        # Match 'PHẦN X.Y. ...' or 'PHẦN X: ...'
         r'^\s*(PHẦN\s+[0-9IVX]+(?:\.[0-9]+)?[:.]?\s*[^\n]+)',
-        # Match 'Chương X: ...'
         r'^\s*(Chương\s+[IVXLCDM0-9]+[:.]?\s*[^\n]+)',
-        # Match 'Điều X. ...'
         r'^\s*(Điều\s+[0-9]+[:.]?\s*[^\n]+)',
-        # Match Roman numeral major headings: 'VIII. THƯ VIỆN', 'IX. KÝ TÚC XÁ'
         r'^\s*([I|V|XLCDM]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)',
-        # Match numbered major headings: '1. GIỚI THIỆU CHUNG'
         r'^\s*([0-9]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)',
     ]
 
@@ -92,75 +83,56 @@ def detect_section_heading(text: str) -> Optional[str]:
     return None
 
 
+def _extract_pdf_pages_text(file_path: str) -> List[str]:
+    """Extract raw text of each page from PDF using pypdf, falling back to pdftotext."""
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(file_path)
+        pages_text = [page.extract_text() or "" for page in reader.pages]
+        if any(t.strip() for t in pages_text):
+            return pages_text
+    except Exception as e:
+        print(f"[PDF Loader] pypdf failed or unavailable ({e}), attempting pdftotext fallback...")
+
+    try:
+        output = subprocess.check_output(["pdftotext", file_path, "-"], text=True)
+        return output.split('\x0c')
+    except Exception as e:
+        raise RuntimeError(f"Could not load PDF {file_path} using pypdf or pdftotext: {e}")
+
+
 def load_pdf_pages(file_path: str) -> List[Document]:
-    """Extract pages from PDF using pypdf, falling back to pdftotext if needed."""
+    """Extract pages from PDF and wrap into Document instances with metadata."""
+    raw_pages = _extract_pdf_pages_text(file_path)
     documents: List[Document] = []
     doc_name = os.path.basename(file_path)
     current_section = "Mở đầu"
 
-    # 1. Try pypdf first
-    try:
-        import pypdf
-        reader = pypdf.PdfReader(file_path)
-        for idx, page in enumerate(reader.pages):
-            raw_text = page.extract_text() or ""
-            cleaned = clean_page_text(raw_text)
-            if not cleaned:
-                continue
+    for idx, raw_text in enumerate(raw_pages):
+        cleaned = clean_page_text(raw_text)
+        if not cleaned:
+            continue
 
-            page_num = idx + 1
-            # Book page offset: handbook content starts on printed page 1 at PDF page 3
-            book_page = page_num - 2 if page_num >= 3 else 0
+        page_num = idx + 1
+        book_page = page_num - 2 if page_num >= 3 else 0
 
-            detected = detect_section_heading(cleaned)
-            if detected:
-                current_section = detected
+        detected = detect_section_heading(cleaned)
+        if detected:
+            current_section = detected
 
-            doc = Document(
-                page_content=cleaned,
-                metadata={
-                    "source": file_path,
-                    "document": doc_name,
-                    "page": page_num,
-                    "book_page": book_page,
-                    "section": current_section,
-                }
-            )
-            documents.append(doc)
-        if documents:
-            return documents
-    except Exception as e:
-        print(f"[PDF Loader] pypdf failed or unavailable ({e}), attempting pdftotext fallback...")
+        doc = Document(
+            page_content=cleaned,
+            metadata={
+                "source": file_path,
+                "document": doc_name,
+                "page": page_num,
+                "book_page": book_page,
+                "section": current_section,
+            }
+        )
+        documents.append(doc)
 
-    # 2. Fallback to pdftotext if available
-    try:
-        output = subprocess.check_output(["pdftotext", file_path, "-"], text=True)
-        raw_pages = output.split('\x0c')
-        for idx, raw_text in enumerate(raw_pages):
-            cleaned = clean_page_text(raw_text)
-            if not cleaned:
-                continue
-            page_num = idx + 1
-            book_page = page_num - 2 if page_num >= 3 else 0
-
-            detected = detect_section_heading(cleaned)
-            if detected:
-                current_section = detected
-
-            doc = Document(
-                page_content=cleaned,
-                metadata={
-                    "source": file_path,
-                    "document": doc_name,
-                    "page": page_num,
-                    "book_page": book_page,
-                    "section": current_section,
-                }
-            )
-            documents.append(doc)
-        return documents
-    except Exception as e:
-        raise RuntimeError(f"Could not load PDF {file_path} using pypdf or pdftotext: {e}")
+    return documents
 
 
 def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:

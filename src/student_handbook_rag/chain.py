@@ -3,7 +3,6 @@ Enforces groundedness, explicit uncertainty on out-of-domain queries,
 and source traceability back to handbook page and section.
 """
 
-import os
 from typing import List, Dict, Any, Optional, Tuple
 from langchain_ollama import ChatOllama
 from langchain_core.documents import Document
@@ -23,6 +22,15 @@ QUY TẮC BẮT BUỘC:
    "Tôi không tìm thấy đủ thông tin trong Sổ tay sinh viên để trả lời câu hỏi này."
 3. Trình bày ngắn gọn, chính xác, đúng trọng tâm câu hỏi.
 4. Ở cuối câu trả lời, hãy liệt kê nguồn trích dẫn từ metadata của ngữ cảnh được sử dụng (Tên tài liệu, Trang, Mục/Điều)."""
+
+REFUSAL_PHRASES = (
+    "không tìm thấy đủ thông tin",
+    "không có thông tin",
+    "sổ tay không cung cấp",
+    "sổ tay không đề cập",
+    "không đủ thông tin",
+    "tôi không biết",
+)
 
 
 def arise(model: str = LLM_MODEL, temperature: float = TEMPERATURE) -> ChatOllama:
@@ -105,16 +113,7 @@ class StudentHandbookRAG:
                 "is_insufficient_context": True,
             }
 
-        # Determine if the model expressed explicit uncertainty / insufficient context
-        refusal_phrases = [
-            "không tìm thấy đủ thông tin",
-            "không có thông tin",
-            "sổ tay không cung cấp",
-            "sổ tay không đề cập",
-            "không đủ thông tin",
-            "tôi không biết",
-        ]
-        is_insufficient = any(phrase in raw_answer.lower() for phrase in refusal_phrases)
+        is_insufficient = any(phrase in raw_answer.lower() for phrase in REFUSAL_PHRASES)
 
         sources = []
         for doc, score in scored_docs:
@@ -180,9 +179,14 @@ def createragchain(retriever=None, llm=None, prompt=None):
     """Backward-compatible RAG chain creator."""
     if retriever is not None and hasattr(retriever, "invoke"):
         class _WrappedRetriever(BaselineRetriever):
+            def __init__(self):
+                self.vector_db = None
+                self.k = 2
+
             def retrieve(self, query: str, k=None):
                 docs = retriever.invoke(query)
                 return [(doc, 0.0) for doc in docs]
+
         b_retriever = _WrappedRetriever()
     else:
         b_retriever = BaselineRetriever()
