@@ -1,11 +1,9 @@
-import pytest
 from langchain_core.messages import HumanMessage, AIMessage
 from student_handbook_rag.memory import (
     load_mem_prompt,
     get_session_history,
     create_conversational_rag_chain,
     conversational_rag,
-    session_store,
 )
 
 def test_load_mem_prompt():

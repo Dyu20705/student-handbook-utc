@@ -25,7 +25,8 @@ def print_response(result: dict, debug: bool = False, retriever: BaselineRetriev
 
     if debug:
         print("\n--- Debug: Retrieved Chunks ---")
-        scored_pairs = [(doc, s["score"]) for doc, s in zip(result["retrieved_chunks"], result["sources"])]
+        # Sources are a cited subset, not a one-to-one map of all retrieved chunks.
+        scored_pairs = [(doc, float(rank)) for rank, doc in enumerate(result["retrieved_chunks"], 1)]
         if retriever:
             print(retriever.format_retrieval_debug(result["query"], scored_pairs))
 
@@ -53,15 +54,22 @@ def main():
     )
 
     args = parser.parse_args()
+    if not 1 <= args.top_k <= 10:
+        parser.error("--top-k must be between 1 and 10")
 
     print("[Init] Loading Student Handbook RAG...")
-    retriever = BaselineRetriever(k=args.top_k)
-    rag = StudentHandbookRAG(retriever=retriever)
+    try:
+        retriever = BaselineRetriever(k=args.top_k)
+        rag = StudentHandbookRAG(retriever=retriever)
+    except Exception as exc:
+        print(f"Startup failed ({type(exc).__name__}). Run utc-doctor and utc-ingest.", file=sys.stderr)
+        return 1
     print("[Init] System ready.\n")
 
     if args.query:
         result = rag.query(args.query, k=args.top_k)
         print_response(result, debug=args.debug, retriever=retriever)
+        return 1 if result.get("status") == "error" else 0
     else:
         print("--- Interactive Mode (type 'exit' to quit) ---")
         while True:
@@ -82,4 +90,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

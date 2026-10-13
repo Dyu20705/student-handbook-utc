@@ -1,4 +1,3 @@
-import pytest
 from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.chain import StudentHandbookRAG
 

@@ -1,4 +1,3 @@
-import pytest
 from student_handbook_rag.chain import createretriever, arise, createprompt, createragchain
 from student_handbook_rag.config import LLM_MODEL
 

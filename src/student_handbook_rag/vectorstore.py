@@ -1,110 +1,142 @@
-"""ChromaDB vector store management for Student Handbook RAG.
-Provides reproducible indexing, persistence, and similarity retrieval.
-"""
-
+"""Versioned Chroma indexes with atomic publication and a single writer lock."""
+import hashlib
+import json
 import os
-import shutil
-from typing import List, Tuple, Optional
-from langchain_core.documents import Document
-from langchain_ollama import OllamaEmbeddings
+import re
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+from filelock import FileLock
 from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
 
-from student_handbook_rag.loader import ragload, ragchunking
 from student_handbook_rag.config import (
-    EMBEDDING_MODEL,
-    CHROMA_DEFAULT_DIR,
-    RAW_DATA_PATH,
-    CHUNK_SIZE,
-    CHUNK_OVERLAP,
+    EMBEDDING_MODEL, CHROMA_DEFAULT_DIR, RAW_DATA_PATH, CHUNK_SIZE,
+    CHUNK_OVERLAP, OLLAMA_BASE_URL, OLLAMA_TIMEOUT, validate_config,
 )
+from student_handbook_rag.loader import ragload, ragchunking, resolve_data_path
 
 
-def get_embedding_function(model: str = EMBEDDING_MODEL) -> OllamaEmbeddings:
-    """Initialize local Ollama embeddings."""
-    return OllamaEmbeddings(model=model)
+class IndexNotReadyError(RuntimeError):
+    """No complete, compatible index is available."""
+
+
+def get_embedding_function(model=EMBEDDING_MODEL):
+    validate_config()
+    return OllamaEmbeddings(model=model, base_url=OLLAMA_BASE_URL,
+                            client_kwargs={"timeout": OLLAMA_TIMEOUT, "trust_env": False})
 
 
 def embes():
-    """Backward-compatible alias for embedding function."""
     return get_embedding_function()
 
 
-def build_vector_store(
-    persist_dir: str = CHROMA_DEFAULT_DIR,
-    data_path: str = RAW_DATA_PATH,
-    chunk_size: int = CHUNK_SIZE,
-    chunk_overlap: int = CHUNK_OVERLAP,
-    force_rebuild: bool = False,
-    collection_name: str = "utc_handbook",
-) -> Chroma:
-    """Build or load a Chroma vector store from handbook documents.
-    
-    Args:
-        persist_dir: Directory to save Chroma files.
-        data_path: Path to handbook source file (PDF or TXT).
-        chunk_size: Maximum chunk character size.
-        chunk_overlap: Overlap characters between chunks.
-        force_rebuild: If True, deletes existing index and rebuilds from scratch.
-        collection_name: Name of Chroma collection.
+def _manifest_path(persist_dir, collection_name):
+    if not re.fullmatch(r"[A-Za-z0-9_-]{3,63}", collection_name):
+        raise ValueError("Invalid collection name")
+    return Path(persist_dir).resolve() / f"{collection_name}.manifest.json"
+
+
+def read_manifest(persist_dir=CHROMA_DEFAULT_DIR, collection_name="utc_handbook"):
+    path = _manifest_path(persist_dir, collection_name)
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        if (manifest["schema_version"] != 1 or manifest["chunk_count"] <= 0
+                or manifest["embedding_model"] != EMBEDDING_MODEL
+                or not re.fullmatch(re.escape(collection_name) + r"_[0-9a-f]{32}", manifest["collection"])):
+            raise ValueError("Incompatible manifest")
+        return manifest
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise IndexNotReadyError("Index missing or incompatible; run utc-ingest --force") from exc
+
+
+def _open_index(persist_dir, collection_name, embedding):
+    manifest = read_manifest(persist_dir, collection_name)
+    db = Chroma(persist_directory=str(Path(persist_dir).resolve()),
+                embedding_function=embedding, collection_name=manifest["collection"],
+                create_collection_if_not_exists=False)
+    if db._collection.count() != manifest["chunk_count"]:
+        raise IndexNotReadyError("Index count differs from manifest; rebuild required")
+    return db
+
+
+def validate_source(manifest, data_path=RAW_DATA_PATH):
+    """Ensure displayed page references still refer to the indexed source bytes."""
+    try:
+        digest = hashlib.sha256(Path(resolve_data_path(data_path)).read_bytes()).hexdigest()
+        if digest != manifest["source_sha256"]:
+            raise ValueError("Source changed")
+    except (OSError, KeyError, ValueError) as exc:
+        raise IndexNotReadyError("Source differs from indexed snapshot; rebuild required") from exc
+
+
+def build_vector_store(persist_dir=CHROMA_DEFAULT_DIR, data_path=RAW_DATA_PATH,
+                       chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP,
+                       force_rebuild=False, collection_name="utc_handbook", load_only=False):
+    """Publish an immutable generation after every batch succeeds; preserve the old one.
+
+    Readers never ingest. Failed generations are deleted, previous generations stay
+    available for rollback. Existing unversioned indexes require explicit --force.
     """
     embedding = get_embedding_function()
+    path = _manifest_path(persist_dir, collection_name)
+    if load_only:
+        validate_source(read_manifest(persist_dir, collection_name), data_path)
+        return _open_index(persist_dir, collection_name, embedding)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(path.parent / "ingest.lock"), timeout=0):
+        if path.exists() and not force_rebuild:
+            manifest = read_manifest(persist_dir, collection_name)
+            source = Path(resolve_data_path(data_path))
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            if (digest != manifest["source_sha256"] or chunk_size != manifest["chunk_size"]
+                    or chunk_overlap != manifest["chunk_overlap"]):
+                raise IndexNotReadyError("Source or chunk settings changed; run utc-ingest --force")
+            return _open_index(persist_dir, collection_name, embedding)
+        if (path.parent / "chroma.sqlite3").exists() and not path.exists() and not force_rebuild:
+            raise IndexNotReadyError("Unversioned index found; run utc-ingest --force")
+        source = Path(resolve_data_path(data_path))
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        chunks = ragchunking(ragload(str(source)), chunk_size, chunk_overlap)
+        if not chunks:
+            raise ValueError("Source contains no extractable text")
+        if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+            raise ValueError("Source changed during extraction; retry ingestion")
+        generation = f"{collection_name}_{uuid.uuid4().hex}"
+        db = Chroma(persist_directory=str(path.parent), embedding_function=embedding,
+                    collection_name=generation, collection_metadata={"hnsw:space": "cosine"})
+        temp = path.with_name(f"{path.name}.{uuid.uuid4().hex}.tmp")
+        try:
+            for i in range(0, len(chunks), 50):
+                batch = chunks[i:i + 50]
+                db.add_documents(batch, ids=[c.metadata["chunk_id"] for c in batch])
+            if db._collection.count() != len(chunks):
+                raise IndexNotReadyError("Incomplete index; previous generation preserved")
+            manifest = {
+                "schema_version": 1, "collection": generation,
+                "embedding_model": EMBEDDING_MODEL, "source_sha256": digest,
+                "source_document": source.name, "chunk_count": len(chunks),
+                "chunk_size": chunk_size, "chunk_overlap": chunk_overlap,
+                "distance_metric": "cosine", "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            validate_source(manifest, str(source))
+            with temp.open("w", encoding="utf-8") as handle:
+                json.dump(manifest, handle, ensure_ascii=False, indent=2)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temp, path)
+        except BaseException:
+            db.delete_collection()
+            raise
+        finally:
+            temp.unlink(missing_ok=True)
+        return db
 
-    exists = os.path.exists(persist_dir) and bool(os.listdir(persist_dir))
 
-    if exists and not force_rebuild:
-        print(f"[VectorStore] Loading existing index from {persist_dir}...")
-        return Chroma(
-            persist_directory=persist_dir,
-            embedding_function=embedding,
-            collection_name=collection_name,
-        )
-
-    if force_rebuild and os.path.exists(persist_dir):
-        print(f"[VectorStore] Rebuilding index: clearing {persist_dir}...")
-        shutil.rmtree(persist_dir)
-    os.makedirs(persist_dir, exist_ok=True)
-
-    print(f"[VectorStore] Ingesting documents from {data_path}...")
-    documents = ragload(data_path)
-    chunks = ragchunking(documents, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    print(f"[VectorStore] Indexing {len(chunks)} chunks into Chroma at {persist_dir}...")
-
-    # Index in batches of 50 to avoid memory spikes and report progress
-    batch_size = 50
-    vector_db = Chroma(
-        persist_directory=persist_dir,
-        embedding_function=embedding,
-        collection_name=collection_name,
-    )
-    for i in range(0, len(chunks), batch_size):
-        batch = chunks[i : i + batch_size]
-        vector_db.add_documents(batch)
-        print(f"  Indexed chunks {i+1} to {min(i+batch_size, len(chunks))} / {len(chunks)}")
-
-    print(f"[VectorStore] Index built successfully with {len(chunks)} chunks.")
-    return vector_db
-
-
-def createvector(persist_dir: str = CHROMA_DEFAULT_DIR, force_rebuild: bool = False) -> Chroma:
-    """Backward-compatible vector store creator."""
+def createvector(persist_dir=CHROMA_DEFAULT_DIR, force_rebuild=False):
     return build_vector_store(persist_dir=persist_dir, force_rebuild=force_rebuild)
 
 
-def similarity_search_with_scores(
-    vector_db: Chroma,
-    query: str,
-    k: int = 3,
-) -> List[Tuple[Document, float]]:
-    """Retrieve top-k documents along with similarity scores (distance/similarity)."""
+def similarity_search_with_scores(vector_db, query, k=3):
     return vector_db.similarity_search_with_score(query, k=k)
-
-
-if __name__ == "__main__":
-    db = build_vector_store(force_rebuild=False)
-    query = "Quy định đánh giá rèn luyện sinh viên"
-    results = similarity_search_with_scores(db, query, k=2)
-    print(f"\nQuery: '{query}'")
-    for idx, (doc, score) in enumerate(results):
-        print(f"\n--- Result #{idx+1} (score: {score:.4f}) ---")
-        print(f"Page: {doc.metadata.get('page')}, Section: {doc.metadata.get('section')}")
-        print(doc.page_content[:200])

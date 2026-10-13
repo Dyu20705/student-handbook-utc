@@ -1,4 +1,3 @@
-import pytest
 from langchain_core.documents import Document
 from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.chain import build_context_text

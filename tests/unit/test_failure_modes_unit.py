@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import MagicMock
 from langchain_core.documents import Document
 from student_handbook_rag.chain import StudentHandbookRAG
@@ -25,7 +24,8 @@ def test_no_documents_indexed():
     rag = StudentHandbookRAG(retriever=mock_retriever, llm=mock_llm)
 
     res = rag.query("Quy định đào tạo")
-    assert res["is_insufficient_context"] is True
+    assert res["status"] == "error"
+    assert res["is_insufficient_context"] is False
     assert "Không tìm thấy dữ liệu" in res["answer"]
     assert len(res["sources"]) == 0
 
@@ -41,9 +41,9 @@ def test_unanswerable_refusal_detection():
 
     # Mock chain invocation returning standard refusal phrase
     rag.chain = MagicMock()
-    rag.chain.invoke.return_value = "Tôi không tìm thấy đủ thông tin trong Sổ tay sinh viên để trả lời câu hỏi này."
+    rag.chain.invoke.return_value = '{"answer":"Tôi không tìm thấy đủ thông tin trong Sổ tay sinh viên để trả lời câu hỏi này.","citation_ids":[],"insufficient_context":true}'
 
     res = rag.query("Giá vé máy bay đi Hà Nội?")
     assert res["is_insufficient_context"] is True
     assert "không tìm thấy đủ thông tin" in res["answer"]
-    assert len(res["sources"]) == 1
+    assert len(res["sources"]) == 0

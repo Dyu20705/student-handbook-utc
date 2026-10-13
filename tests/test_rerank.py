@@ -1,4 +1,3 @@
-import pytest
 from sentence_transformers import CrossEncoder
 
 def test_cross_encoder_reranker():

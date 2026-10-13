@@ -6,16 +6,24 @@ from typing import List, Tuple, Optional
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
-from student_handbook_rag.config import RETRIEVAL_K
+from student_handbook_rag.config import RETRIEVAL_K, MAX_RETRIEVAL_K
 from student_handbook_rag.vectorstore import build_vector_store, similarity_search_with_scores
+from student_handbook_rag.lexical import LexicalIndex
 
 
 class BaselineRetriever:
     """Baseline dense retriever querying ChromaDB with top-k similarity."""
 
     def __init__(self, vector_db: Optional[Chroma] = None, k: int = RETRIEVAL_K):
-        self.vector_db = vector_db or build_vector_store()
+        if not 1 <= k <= MAX_RETRIEVAL_K:
+            raise ValueError("k must be between 1 and 10")
+        self.vector_db = vector_db if vector_db is not None else build_vector_store(load_only=True)
         self.k = k
+        records = self.vector_db.get(include=["documents", "metadatas"])
+        self.lexical = LexicalIndex([
+            Document(page_content=text, metadata=metadata)
+            for text, metadata in zip(records["documents"], records["metadatas"])
+        ])
 
     def retrieve(self, query: str, k: Optional[int] = None) -> List[Tuple[Document, float]]:
         """Retrieve top-k relevant documents with their similarity scores.
@@ -24,9 +32,24 @@ class BaselineRetriever:
             List of (Document, score) tuples.
         """
         top_k = k if k is not None else self.k
+        if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= MAX_RETRIEVAL_K:
+            raise ValueError("k must be between 1 and 10")
         if not query or not query.strip():
             return []
-        return similarity_search_with_scores(self.vector_db, query.strip(), k=top_k)
+        dense = similarity_search_with_scores(self.vector_db, query.strip(), k=max(5, top_k))
+        lexical = self.lexical.search(query, max(5, top_k))
+        # Preserve the measured top-three dense recall. Reserve the next two
+        # context slots for lexical matches, useful for app names/abbreviations.
+        candidates = dense[:3] + lexical[:2] + dense[3:] + lexical[2:]
+        selected, seen = [], set()
+        for doc, _ in candidates:
+            identity = doc.metadata["chunk_id"]
+            if identity not in seen:
+                seen.add(identity)
+                selected.append((doc, float(len(selected) + 1)))
+            if len(selected) == top_k:
+                break
+        return selected
 
     def retrieve_documents(self, query: str, k: Optional[int] = None) -> List[Document]:
         """Retrieve top-k documents (without scores, for standard LangChain interfaces)."""
@@ -47,7 +70,7 @@ class BaselineRetriever:
             chunk_id = meta.get("chunk_id", "N/A")
 
             lines.append(f"RESULT #{idx}")
-            lines.append(f"  Score:       {score:.4f} (Chroma L2 distance, lower = closer)")
+            lines.append(f"  Score:       {score:.4f} (retrieval rank; lower = earlier; not confidence)")
             lines.append(f"  Document:    {document} (Path: {source})")
             lines.append(f"  PDF Page:    {page} (Book Page: {book_page})")
             lines.append(f"  Section:     {section}")

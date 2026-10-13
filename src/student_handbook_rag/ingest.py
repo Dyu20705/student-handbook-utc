@@ -9,7 +9,7 @@ import sys
 import time
 from student_handbook_rag.config import (
     RAW_DATA_PATH,
-    CHROMA_BASELINE_DIR,
+    CHROMA_DEFAULT_DIR,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
 )
@@ -21,7 +21,7 @@ def main():
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Force rebuild index from scratch (clears existing vector DB).",
+        help="Build a new index generation and publish only after success.",
     )
     parser.add_argument(
         "--data-path",
@@ -32,8 +32,8 @@ def main():
     parser.add_argument(
         "--persist-dir",
         type=str,
-        default=CHROMA_BASELINE_DIR,
-        help=f"Path to Chroma persistence directory (default: {CHROMA_BASELINE_DIR})",
+        default=CHROMA_DEFAULT_DIR,
+        help=f"Path to Chroma persistence directory (default: {CHROMA_DEFAULT_DIR})",
     )
     parser.add_argument(
         "--chunk-size",

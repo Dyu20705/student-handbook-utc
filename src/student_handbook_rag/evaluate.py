@@ -9,7 +9,6 @@ Usage:
 import argparse
 import json
 import os
-import shutil
 import sys
 import time
 from typing import List, Dict, Any
@@ -18,8 +17,8 @@ from student_handbook_rag.config import (
     BENCHMARK_PATH,
     RAW_DATA_PATH,
     DATA_DIR,
+    RETRIEVAL_K,
 )
-from student_handbook_rag.loader import ragload
 from student_handbook_rag.vectorstore import build_vector_store
 from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.chain import StudentHandbookRAG
@@ -58,7 +57,6 @@ def evaluate_retrieval(
 
         scored_docs = retriever.retrieve(query, k=max_k)
         retrieved_pages = [doc.metadata.get("page") for doc, _ in scored_docs]
-        retrieved_book_pages = [doc.metadata.get("book_page") for doc, _ in scored_docs]
 
         # Determine the rank of the first hit
         rank_hit = 0
@@ -70,7 +68,7 @@ def evaluate_retrieval(
             page_match = (gold_page and doc_page == gold_page) or (gold_book_page and doc_book_page == gold_book_page)
             keyword_match = any(kw in doc_text for kw in gold_keywords) if gold_keywords else False
 
-            if page_match or keyword_match:
+            if page_match or (gold_page is None and gold_book_page is None and keyword_match):
                 rank_hit = rank
                 break
 
@@ -117,6 +115,7 @@ def evaluate_generation(
 
     correct_answers = 0
     grounded_citations = 0
+    errors = 0
     detailed_qa = []
 
     print(f"\n[Generation Eval] Evaluating {len(answerable_items)} answerable questions...")
@@ -132,7 +131,9 @@ def evaluate_generation(
 
         # Keyword recall in generated answer
         kw_matched = [kw for kw in gold_kw if kw in ans_lower]
-        is_correct = len(kw_matched) > 0 or not gold_kw
+        failed = res.get("status") == "error"
+        errors += int(failed)
+        is_correct = bool(gold_kw and kw_matched) and not failed and not res["is_insufficient_context"]
         if is_correct:
             correct_answers += 1
 
@@ -140,8 +141,9 @@ def evaluate_generation(
         cited_pages = [s.get("page") for s in res["sources"]]
         cited_book_pages = [s.get("book_page") for s in res["sources"]]
         has_grounded_citation = (
-            (expected_page in cited_pages) or (expected_book_page in cited_book_pages)
-        )
+            (expected_page is not None and expected_page in cited_pages)
+            or (expected_book_page is not None and expected_book_page in cited_book_pages)
+        ) and not failed and not res["is_insufficient_context"]
         if has_grounded_citation:
             grounded_citations += 1
 
@@ -166,7 +168,8 @@ def evaluate_generation(
     for idx, item in enumerate(unanswerable_items, start=1):
         q = item["question"]
         res = rag_engine.query(q, k=k)
-        is_refused = res["is_insufficient_context"]
+        errors += int(res.get("status") == "error")
+        is_refused = res.get("status") == "refused"
         if is_refused:
             correct_refusals += 1
 
@@ -183,8 +186,9 @@ def evaluate_generation(
     total_unans = len(unanswerable_items)
 
     return {
-        "answer_correctness_rate": correct_answers / total_ans if total_ans else 0.0,
-        "citation_groundedness_rate": grounded_citations / total_ans if total_ans else 0.0,
+        "answer_keyword_match_rate": correct_answers / total_ans if total_ans else 0.0,
+        "citation_page_match_rate": grounded_citations / total_ans if total_ans else 0.0,
+        "operational_errors": errors,
         "unanswerable_refusal_rate": correct_refusals / total_unans if total_unans else 0.0,
         "total_answerable": total_ans,
         "total_unanswerable": total_unans,
@@ -204,7 +208,6 @@ def run_chunking_experiment(benchmark: List[Dict[str, Any]]) -> Dict[str, Any]:
     exp_results = []
     print("\n=== Chunking Hyperparameter Experiment ===")
 
-    docs = ragload(RAW_DATA_PATH)
 
     for cfg in configs:
         c_size = cfg["chunk_size"]
@@ -242,12 +245,7 @@ def run_chunking_experiment(benchmark: List[Dict[str, Any]]) -> Dict[str, Any]:
 
         print(f"  Result: Total Chunks={total_chunks} | Hit@1={cfg_res['hit_at_1']:.2f} | Hit@3={cfg_res['hit_at_3']:.2f} | Hit@5={cfg_res['hit_at_5']:.2f} | MRR={cfg_res['mrr']:.4f}")
 
-        # Clean up experiment directory to save disk space
-        try:
-            if os.path.exists(exp_dir):
-                shutil.rmtree(exp_dir)
-        except Exception:
-            pass
+        # Keep the experiment artifact: an open Chroma client may still hold files.
 
     return {"experiment": exp_results}
 
@@ -276,7 +274,10 @@ def main():
         action="store_true",
         help="Skip LLM generation evaluation (run retrieval evaluation only).",
     )
+    parser.add_argument("--check", action="store_true", help="Fail unless Hit@3 >= .90, keyword match >= .80, citation page match >= .90, refusal = 1 and no operational errors. Human review still required.")
     args = parser.parse_args()
+    if args.check and args.skip_generation:
+        parser.error("--check requires generation evaluation")
 
     print("=== Student Handbook RAG - Evaluation Benchmark ===")
 
@@ -316,10 +317,11 @@ def main():
     if not args.skip_generation:
         print("\n--- GENERATION EVALUATION (LLM GROUNDEDNESS) ---")
         rag_engine = StudentHandbookRAG(retriever=retriever)
-        gen_metrics = evaluate_generation(benchmark, rag_engine, k=3)
+        gen_metrics = evaluate_generation(benchmark, rag_engine, k=RETRIEVAL_K)
         results_data["generation"] = {
-            "answer_correctness_rate": round(gen_metrics["answer_correctness_rate"], 4),
-            "citation_groundedness_rate": round(gen_metrics["citation_groundedness_rate"], 4),
+            "answer_keyword_match_rate": round(gen_metrics["answer_keyword_match_rate"], 4),
+            "citation_page_match_rate": round(gen_metrics["citation_page_match_rate"], 4),
+            "operational_errors": gen_metrics["operational_errors"],
             "unanswerable_refusal_rate": round(gen_metrics["unanswerable_refusal_rate"], 4),
             "total_answerable": gen_metrics["total_answerable"],
             "total_unanswerable": gen_metrics["total_unanswerable"],
@@ -328,8 +330,8 @@ def main():
         results_data["detailed_refusals"] = gen_metrics["detailed_refusals"]
 
         print("\n--- Generation Metrics Summary ---")
-        print(f"  Answer Correctness:       {gen_metrics['answer_correctness_rate'] * 100:.1f}%")
-        print(f"  Citation Groundedness:    {gen_metrics['citation_groundedness_rate'] * 100:.1f}%")
+        print(f"  Answer Keyword Match:     {gen_metrics['answer_keyword_match_rate'] * 100:.1f}%")
+        print(f"  Citation Page Match:      {gen_metrics['citation_page_match_rate'] * 100:.1f}%")
         print(f"  Refusal on Unanswerable:  {gen_metrics['unanswerable_refusal_rate'] * 100:.1f}%")
 
     # Save to JSON
@@ -337,7 +339,16 @@ def main():
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(results_data, f, ensure_ascii=False, indent=2)
     print(f"\nEvaluation results saved to: {args.output}")
+    if args.check:
+        passed = (ret_metrics["total_answerable"] > 0 and ret_metrics["hit_at_3"] >= .90
+                  and gen_metrics["total_unanswerable"] > 0
+                  and gen_metrics["answer_keyword_match_rate"] >= .80
+                  and gen_metrics["citation_page_match_rate"] >= .90
+                  and gen_metrics["unanswerable_refusal_rate"] == 1
+                  and gen_metrics["operational_errors"] == 0)
+        return 0 if passed else 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

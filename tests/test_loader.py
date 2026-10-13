@@ -1,4 +1,3 @@
-import pytest
 from student_handbook_rag.loader import (
     ragload,
     ragchunking,

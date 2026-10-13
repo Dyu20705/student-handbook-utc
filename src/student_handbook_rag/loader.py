@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from langchain_core.documents import Document
-from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from student_handbook_rag.config import (
@@ -26,15 +25,8 @@ def resolve_data_path(filename: str = RAW_DATA_PATH) -> str:
     if os.path.exists(filename):
         return os.path.abspath(filename)
 
-    base = os.path.basename(filename)
-    candidates = [
-        os.path.join(str(PROJECT_ROOT), "data", "raw", base),
-        os.path.join(str(PROJECT_ROOT), "data", "raw", "sotaysvk67.pdf"),
-        os.path.join(str(PROJECT_ROOT), "data", "raw", "Sổ tay SV K67.pdf"),
-        os.path.join(str(PROJECT_ROOT), filename),
-        os.path.join("data", "raw", base),
-        os.path.join("data", "raw", "sotaysvk67.pdf"),
-    ]
+    # Never silently substitute a different handbook for a missing requested file.
+    candidates = [os.path.join(str(PROJECT_ROOT), filename)]
     for candidate in candidates:
         if os.path.exists(candidate):
             return os.path.abspath(candidate)
@@ -95,7 +87,7 @@ def _extract_pdf_pages_text(file_path: str) -> List[str]:
         print(f"[PDF Loader] pypdf failed or unavailable ({e}), attempting pdftotext fallback...")
 
     try:
-        output = subprocess.check_output(["pdftotext", file_path, "-"], text=True)
+        output = subprocess.check_output(["pdftotext", file_path, "-"], text=True, encoding="utf-8", timeout=60)
         return output.split('\x0c')
     except Exception as e:
         raise RuntimeError(f"Could not load PDF {file_path} using pypdf or pdftotext: {e}")
@@ -144,9 +136,8 @@ def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:
     ext = os.path.splitext(resolved_path)[1].lower()
     if ext == ".pdf":
         return load_pdf_pages(resolved_path)
-    else:
-        loader = TextLoader(resolved_path, encoding="utf-8")
-        docs = loader.load()
+    elif ext == ".txt":
+        docs = [Document(page_content=Path(resolved_path).read_text(encoding="utf-8"), metadata={"source": resolved_path})]
         # Add basic metadata to text documents
         for doc in docs:
             doc.metadata["document"] = os.path.basename(resolved_path)
@@ -154,6 +145,7 @@ def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:
             doc.metadata.setdefault("book_page", 1)
             doc.metadata.setdefault("section", "Chung")
         return docs
+    raise ValueError("Only .pdf and .txt sources are supported")
 
 
 def ragchunking(
@@ -162,6 +154,8 @@ def ragchunking(
     chunk_overlap: int = CHUNK_OVERLAP,
 ) -> List[Document]:
     """Split documents into semantic chunks with unique chunk_id and full metadata preservation."""
+    if chunk_size <= 0 or not 0 <= chunk_overlap < chunk_size:
+        raise ValueError("Require chunk_size > 0 and 0 <= chunk_overlap < chunk_size")
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
