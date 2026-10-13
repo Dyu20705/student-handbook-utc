@@ -63,13 +63,15 @@ class BaselineRetriever:
         Generation uses this context; retrieval metrics still score the original
         ranked candidates. Keep the next page's own citation ID and page metadata.
         """
-        expanded = list(selected)
+        expanded = []
+        added = 0
         seen = {doc.metadata.get("chunk_id") for doc, _ in selected}
         chunks = getattr(self, "_chunks", {})
         for doc, _ in selected:
+            expanded.append((doc, float(len(expanded) + 1)))
             meta = doc.metadata
             index, page = meta.get("chunk_index"), meta.get("page")
-            if not isinstance(index, int) or not isinstance(page, int):
+            if added == 2 or not isinstance(index, int) or not isinstance(page, int):
                 continue
             following = chunks.get((meta.get("source", meta.get("document")), index + 1))
             if (following is None or following.metadata.get("page") != page + 1
@@ -78,8 +80,7 @@ class BaselineRetriever:
                 continue
             expanded.append((following, float(len(expanded) + 1)))
             seen.add(following.metadata["chunk_id"])
-            if len(expanded) - len(selected) == 2:
-                break
+            added += 1
         return expanded
 
     def retrieve_documents(self, query: str, k: Optional[int] = None) -> List[Document]:

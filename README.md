@@ -80,6 +80,7 @@ Chi tiết: [vận hành/backup/rollback](docs/operations.md), [dependency secur
 - PDF được parse dạng text; bảng phức tạp và OCR chưa được xử lý chuyên biệt.
 - Trang in hiện suy ra bằng trang PDF trừ 2; đối chiếu trang PDF khi kiểm chứng.
 - Mục/Điều được dò ở cấp trang, có thể không chính xác với nhiều điều trên cùng trang.
+- Prompt sinh câu trả lời chỉ dùng nội dung trích đoạn và trang/ID; không dùng nhãn mục ước tính để tránh gán nhầm điều khoản.
 - Model có thể từ chối quá mức hoặc trả lời thiếu; câu trả lời dựa trên tài liệu K67, không tự cập nhật văn bản mới.
 - Source Intake v1.2 trong `docs/architecture/` là đặc tả riêng chưa triển khai; runtime hiện chỉ nạp PDF/TXT do người vận hành cung cấp.
 

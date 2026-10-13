@@ -50,4 +50,5 @@ def test_context_growth_is_bounded():
     selected = [(documents[i], float(i + 1)) for i in (0, 2, 4, 6)]
     result = retriever(documents).complete_page_bullets(selected)
     assert len(result) == len(selected) + 2
-    assert result[:len(selected)] == selected
+    assert [d.metadata["chunk_index"] for d, _ in result] == [1, 2, 3, 4, 5, 7]
+    assert [score for _, score in result] == list(range(1, 7))

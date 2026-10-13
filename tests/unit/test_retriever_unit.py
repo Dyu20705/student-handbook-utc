@@ -39,3 +39,5 @@ def test_build_context_text():
     assert "Trang PDF: 15" in context
     assert "Đoạn 1" in context
     assert "Đoạn 2" in context
+    # Estimated page headings are not evidence of which section a chunk belongs to.
+    assert "Mục A" not in context and "Mục B" not in context
