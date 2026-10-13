@@ -1,0 +1,8 @@
+include README.md CHANGELOG.md uv.lock
+recursive-include tests *.py
+include docs/operations.md docs/security.md docs/qualification/local-production-readiness.md
+include docs/qualification/local-benchmark-2026-10-13.json
+recursive-include scripts *.ps1
+prune .uv-cache
+prune data
+prune .venv

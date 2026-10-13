@@ -26,3 +26,11 @@ data/chroma/
 .DS_Store
 .idea/
 .vscode/
+.env
+.env.*
+!.env.example
+.uv-cache/
+*.egg-info/
+dist/
+build/
+data/runtime/

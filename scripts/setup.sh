@@ -1,22 +1,8 @@
 #!/usr/bin/env bash
-
-echo "🚀 Bắt đầu quá trình setup..."
-
-# 1. Tạo và kích hoạt môi trường ảo (virtual environment)
-echo "🐍 Đang tạo virtual environment 'rag_env'..."
-python3 -m venv rag_env
-source rag_env/bin/activate
-
-# 2. Cài đặt các thư viện Python
-echo "📦 Đang cài đặt các thư viện Python..."
-pip install --upgrade pip
-pip install langchain langchain-community langchain-core langchain-ollama langchain-chroma sentence-transformers bs4 pytest arxiv
-
-# 3. Tải các model của Ollama
-echo "🦙 Đang tải các model Ollama (qwen2.5:3b và qwen3-embedding:0.6b)..."
-# Dùng 'pull' thay cho 'run' để script không bị dừng lại chờ nhập liệu
-ollama pull qwen2.5:3b
-ollama pull qwen3-embedding:0.6b
-
-echo "✅ Setup hoàn tất thành công!"
-echo "👉 Để bắt đầu làm việc, hãy chạy lệnh: source rag_env/bin/activate"
+set -euo pipefail
+cd -- "$(dirname -- "$0")/.."
+uv sync --locked --python 3.12
+ollama pull "${RAG_EMBEDDING_MODEL:-qwen3-embedding:0.6b}"
+ollama pull "${RAG_LLM_MODEL:-qwen3.5:9b-q4_K_M}"
+uv run --locked utc-ingest
+uv run --locked utc-doctor
