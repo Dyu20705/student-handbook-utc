@@ -70,6 +70,11 @@ def main():
         duration = time.time() - start_time
         print(f"\nIngestion completed in {duration:.2f}s.")
         print(f"Total indexed chunks: {total_docs}")
+        if args.data_path != RAW_DATA_PATH or args.persist_dir != CHROMA_DEFAULT_DIR:
+            from pathlib import Path
+            print("CLI path overrides apply only to this ingestion. Before doctor/ask/serve, set:")
+            print(f"RAG_DATA_PATH={Path(args.data_path).resolve()}")
+            print(f"RAG_CHROMA_DIR={Path(args.persist_dir).resolve()}")
     except Exception as e:
         print(f"Error: Ingestion failed: {e}", file=sys.stderr)
         sys.exit(1)

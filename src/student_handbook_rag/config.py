@@ -40,6 +40,7 @@ TOP_N_FINAL = int(os.getenv("RAG_TOP_N_FINAL", "3"))
 TEMPERATURE = float(os.getenv("RAG_TEMPERATURE", "0.0"))
 
 OLLAMA_BASE_URL = os.getenv("RAG_OLLAMA_URL", "http://127.0.0.1:11434")
+ALLOW_REMOTE_OLLAMA = os.getenv("RAG_ALLOW_REMOTE_OLLAMA", "0")
 OLLAMA_TIMEOUT = float(os.getenv("RAG_OLLAMA_TIMEOUT", "120"))
 MAX_QUESTION_LENGTH = 2000
 MAX_RETRIEVAL_K = 10
@@ -49,6 +50,7 @@ MAX_OUTPUT_TOKENS = int(os.getenv("RAG_MAX_OUTPUT_TOKENS", "768"))
 def validate_config():
     """Fail before connecting to services when settings are invalid."""
     import math
+    import ipaddress
     from urllib.parse import urlparse
 
     if CHUNK_SIZE <= 0 or not 0 <= CHUNK_OVERLAP < CHUNK_SIZE:
@@ -64,4 +66,12 @@ def validate_config():
     url = urlparse(OLLAMA_BASE_URL)
     if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.password:
         raise ValueError("RAG_OLLAMA_URL must be an HTTP(S) URL without credentials")
+    if ALLOW_REMOTE_OLLAMA not in {"0", "1"}:
+        raise ValueError("RAG_ALLOW_REMOTE_OLLAMA must be 0 or 1")
+    try:
+        is_loopback = ipaddress.ip_address(url.hostname).is_loopback
+    except ValueError:
+        is_loopback = url.hostname == "localhost"
+    if not is_loopback and ALLOW_REMOTE_OLLAMA != "1":
+        raise ValueError("Remote Ollama sends questions and context off this machine; set RAG_ALLOW_REMOTE_OLLAMA=1 to opt in")
 
