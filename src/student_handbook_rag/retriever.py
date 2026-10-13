@@ -3,6 +3,7 @@ Encapsulates dense top-k similarity retrieval, score tracking, and debug formatt
 """
 
 from typing import List, Tuple, Optional
+import re
 from langchain_core.documents import Document
 from langchain_chroma import Chroma
 
@@ -20,10 +21,15 @@ class BaselineRetriever:
         self.vector_db = vector_db if vector_db is not None else build_vector_store(load_only=True)
         self.k = k
         records = self.vector_db.get(include=["documents", "metadatas"])
-        self.lexical = LexicalIndex([
+        documents = [
             Document(page_content=text, metadata=metadata)
             for text, metadata in zip(records["documents"], records["metadatas"])
-        ])
+        ]
+        self.lexical = LexicalIndex(documents)
+        self._chunks = {
+            (doc.metadata.get("source", doc.metadata.get("document")), doc.metadata["chunk_index"]): doc
+            for doc in documents if isinstance(doc.metadata.get("chunk_index"), int)
+        }
 
     def retrieve(self, query: str, k: Optional[int] = None) -> List[Tuple[Document, float]]:
         """Retrieve top-k relevant documents with their similarity scores.
@@ -50,6 +56,31 @@ class BaselineRetriever:
             if len(selected) == top_k:
                 break
         return selected
+
+    def complete_page_bullets(self, selected: List[Tuple[Document, float]]) -> List[Tuple[Document, float]]:
+        """Add at most two adjacent chunks when a bullet list crosses a PDF page.
+
+        Generation uses this context; retrieval metrics still score the original
+        ranked candidates. Keep the next page's own citation ID and page metadata.
+        """
+        expanded = list(selected)
+        seen = {doc.metadata.get("chunk_id") for doc, _ in selected}
+        chunks = getattr(self, "_chunks", {})
+        for doc, _ in selected:
+            meta = doc.metadata
+            index, page = meta.get("chunk_index"), meta.get("page")
+            if not isinstance(index, int) or not isinstance(page, int):
+                continue
+            following = chunks.get((meta.get("source", meta.get("document")), index + 1))
+            if (following is None or following.metadata.get("page") != page + 1
+                    or following.metadata.get("chunk_id") in seen
+                    or not re.match(r"^[+•-]\s", following.page_content.lstrip())):
+                continue
+            expanded.append((following, float(len(expanded) + 1)))
+            seen.add(following.metadata["chunk_id"])
+            if len(expanded) - len(selected) == 2:
+                break
+        return expanded
 
     def retrieve_documents(self, query: str, k: Optional[int] = None) -> List[Document]:
         """Retrieve top-k documents (without scores, for standard LangChain interfaces)."""
