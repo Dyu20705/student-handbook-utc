@@ -1,5 +1,5 @@
 """Evaluation Engine for Student Handbook RAG V1.
-Measures Retrieval (Hit@k, MRR) and Generation (Groundedness, Refusal Rate).
+Measures retrieval (Hit@k, MRR), generation proxies and refusal rate.
 Supports Chunk Size Hyperparameter Experimentation.
 
 Usage:
@@ -109,12 +109,12 @@ def evaluate_generation(
     rag_engine: StudentHandbookRAG,
     k: int = 3,
 ) -> Dict[str, Any]:
-    """Evaluate end-to-end generation quality: correctness, citation, refusal rate."""
+    """Measure keyword/page proxies; semantic completeness needs a separate review."""
     answerable_items = [q for q in benchmark if q.get("answerable", True)]
     unanswerable_items = [q for q in benchmark if not q.get("answerable", True)]
 
-    correct_answers = 0
-    grounded_citations = 0
+    keyword_matches = 0
+    page_matches = 0
     errors = 0
     detailed_qa = []
 
@@ -133,21 +133,21 @@ def evaluate_generation(
         kw_matched = [kw for kw in gold_kw if kw in ans_lower]
         failed = res.get("status") == "error"
         errors += int(failed)
-        is_correct = bool(gold_kw and kw_matched) and not failed and not res["is_insufficient_context"]
-        if is_correct:
-            correct_answers += 1
+        keyword_match = bool(gold_kw and kw_matched) and not failed and not res["is_insufficient_context"]
+        if keyword_match:
+            keyword_matches += 1
 
-        # Check citation accuracy
+        # A matching gold page does not prove that the cited text supports every claim.
         cited_pages = [s.get("page") for s in res["sources"]]
         cited_book_pages = [s.get("book_page") for s in res["sources"]]
-        has_grounded_citation = (
+        citation_page_match = (
             (expected_page is not None and expected_page in cited_pages)
             or (expected_book_page is not None and expected_book_page in cited_book_pages)
         ) and not failed and not res["is_insufficient_context"]
-        if has_grounded_citation:
-            grounded_citations += 1
+        if citation_page_match:
+            page_matches += 1
 
-        print(f"  [{idx}/{len(answerable_items)}] Correct: {is_correct} | Cited: {has_grounded_citation} | Q: {q[:50]}...")
+        print(f"  [{idx}/{len(answerable_items)}] Keyword proxy: {keyword_match} | Page proxy: {citation_page_match} | Q: {q[:50]}...")
 
         detailed_qa.append({
             "id": item["id"],
@@ -155,8 +155,11 @@ def evaluate_generation(
             "question": q,
             "generated_answer": ans,
             "expected_answer": item.get("expected_answer"),
-            "is_correct": is_correct,
-            "has_grounded_citation": has_grounded_citation,
+            "keyword_match": keyword_match,
+            "matched_keywords": kw_matched,
+            "citation_page_match": citation_page_match,
+            "semantic_verdict": "not_reviewed",
+            "status": res.get("status"),
             "sources": res["sources"],
         })
 
@@ -180,14 +183,16 @@ def evaluate_generation(
             "question": q,
             "generated_answer": res["answer"],
             "properly_refused": is_refused,
+            "status": res.get("status"),
+            "sources": res["sources"],
         })
 
     total_ans = len(answerable_items)
     total_unans = len(unanswerable_items)
 
     return {
-        "answer_keyword_match_rate": correct_answers / total_ans if total_ans else 0.0,
-        "citation_page_match_rate": grounded_citations / total_ans if total_ans else 0.0,
+        "answer_keyword_match_rate": keyword_matches / total_ans if total_ans else 0.0,
+        "citation_page_match_rate": page_matches / total_ans if total_ans else 0.0,
         "operational_errors": errors,
         "unanswerable_refusal_rate": correct_refusals / total_unans if total_unans else 0.0,
         "total_answerable": total_ans,
@@ -274,7 +279,7 @@ def main():
         action="store_true",
         help="Skip LLM generation evaluation (run retrieval evaluation only).",
     )
-    parser.add_argument("--check", action="store_true", help="Fail unless Hit@3 >= .90, keyword match >= .80, citation page match >= .90, refusal = 1 and no operational errors. Human review still required.")
+    parser.add_argument("--check-proxies", "--check", dest="check", action="store_true", help="Check automated proxies only: Hit@3 >= .90, keyword match >= .80, citation page match >= .90, refusal = 1, no operational errors. Does NOT establish semantic correctness or release approval.")
     args = parser.parse_args()
     if args.check and args.skip_generation:
         parser.error("--check requires generation evaluation")
@@ -340,6 +345,7 @@ def main():
         json.dump(results_data, f, ensure_ascii=False, indent=2)
     print(f"\nEvaluation results saved to: {args.output}")
     if args.check:
+        print("Checking automated proxies only. Review all answerable responses against the PDF before qualification.")
         passed = (ret_metrics["total_answerable"] > 0 and ret_metrics["hit_at_3"] >= .90
                   and gen_metrics["total_unanswerable"] > 0
                   and gen_metrics["answer_keyword_match_rate"] >= .80
