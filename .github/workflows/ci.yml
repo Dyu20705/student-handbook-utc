@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
-      - run: uv run --locked ruff check src tests
+      - run: uv run --locked ruff check src tests scripts/run_qualification.py
       - run: uv run --locked pytest -q
       - run: uv build
   dependency-audit:

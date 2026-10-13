@@ -51,6 +51,8 @@ def main():
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+    if args.output.exists():
+        parser.error("Choose a new output path; qualification artifacts must not be overwritten.")
     repo = args.repo.resolve()
     if git(repo, "status", "--porcelain", "--untracked-files=no"):
         parser.error("Commit tracked changes before qualification; the tested checkout must be clean.")
@@ -100,6 +102,7 @@ def main():
     stable = (before == code_snapshot(repo) and source_hash == sha256(config.RAW_DATA_PATH)
               and manifest == read_manifest()
               and models == model_snapshot(config.OLLAMA_BASE_URL, [config.LLM_MODEL, config.EMBEDDING_MODEL])
+              and provenance["commit"] == git(repo, "rev-parse", "HEAD")
               and not git(repo, "status", "--porcelain", "--untracked-files=no"))
     result = {
         "schema_version": 1, "started_at": started,
