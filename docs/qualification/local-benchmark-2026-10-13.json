@@ -1,4 +1,13 @@
 {
+  "artifact_status": "superseded_unverified_provenance",
+  "review_note": "Historical output does not match the reviewed HEAD schema and has no tested commit SHA. Metrics below are preserved, not evidence of HEAD quality. Legacy is_correct means any-keyword proxy only.",
+  "manual_review": {
+    "q15": {
+      "verdict": "fail",
+      "reviewer": "Codex source comparison, not UTC academic approval",
+      "reason": "Missing first-attempt subject scores >= 5.0 (including physical/defence education) on PDF page 46 and at least 15 first-registration credits excluding enhanced foreign-language credits on page 45. Keyword match does not establish completeness."
+    }
+  },
   "timestamp": "2026-10-13 16:33:35",
   "benchmark_file": "C:\\Users\\Admin\\student-handbook-utc\\data\\benchmark\\evaluation_set.json",
   "total_questions": 25,

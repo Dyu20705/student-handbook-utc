@@ -3,12 +3,14 @@
 ## Quy trình phát hành
 
 1. Giữ `uv.lock` cùng mã nguồn; cài `uv sync --locked --python 3.12`. Không nâng dependencies ngầm khi khởi động.
-2. Chạy Ruff, offline tests, integration tests, dependency audit và benchmark `--check` theo README.
-3. Đọc câu trả lời benchmark với trang PDF nguồn, đặc biệt câu nhiều điều kiện. Proxy tự động không thay thế đánh giá này.
+2. Chạy Ruff, offline tests, integration tests, dependency audit và benchmark `--check-proxies` theo README. Commit runtime rồi chạy `scripts/run_qualification.py` trên checkout sạch để lưu provenance.
+3. Đọc toàn bộ 22 câu answerable với trang PDF nguồn; ghi verdict từng câu và SHA-256 artifact. Kiểm tra đầy đủ điều kiện bắt buộc, phủ định, đối tượng và ngưỡng số. Proxy tự động không thay thế đánh giá này; q15 từng khớp keyword nhưng thiếu điều kiện 5,0 nên không đạt.
 4. Dừng API trước khi đổi dữ liệu/model. Sao lưu dữ liệu, chạy ingestion, `utc-doctor`, rồi `scripts/start-local.ps1`.
 5. Kiểm tra `/health`, `/ready`, một câu có nguồn và một câu ngoài phạm vi. Lưu kết quả, phiên bản model và hash nguồn.
 
 ## Logs và tài nguyên
+
+Một PID được quản lý cho cả dự án. Start trên port khác vẫn bị từ chối khi PID hiện tại còn sống; stop trước khi đổi port. Các lệnh start/stop dùng khóa file độc quyền; lệnh chạy trùng báo lỗi và không thay đổi PID. PID không thuộc API trong `.venv` bị từ chối dừng; kiểm tra process trước khi xử lý PID file. Foreground giữ khóa đến khi Ctrl+C; stop script dành cho background.
 
 Chạy nền ghi `data/runtime/server.stdout.log` và `server.stderr.log`. Log ứng dụng chỉ có request ID, mã HTTP, thời gian, loại lỗi; không ghi câu hỏi, nội dung PDF hoặc API key. Chế độ `--debug` và benchmark có nội dung, chỉ dùng cục bộ. Di chuyển/xóa log khi server đã dừng; runtime không tự xoay log.
 

@@ -30,3 +30,5 @@ uv run --locked pip-audit --local --skip-editable --ignore-vuln PYSEC-2026-311 -
 ```
 
 API chống DNS rebinding bằng TrustedHost, từ chối Origin khác host, giới hạn body/câu hỏi/top-k/rate và một inference đồng thời. API key tùy chọn chỉ phù hợp máy local. Không cung cấp auth phân quyền, TLS termination hay quota phân tán để triển khai Internet.
+
+Ollama mặc định chỉ kết nối IP loopback hoặc `localhost`; LAN, wildcard và hostname khác bị chặn trước I/O. `RAG_ALLOW_REMOTE_OLLAMA=1` là opt-in rõ ràng để gửi câu hỏi và context ra endpoint remote. Cấu hình remote không nằm trong qualification local. HTTP client không dùng proxy môi trường và không tự theo redirect.

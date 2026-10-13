@@ -1,5 +1,14 @@
 # Changelog
 
+## PR #1 review fixes — 2026-10-13
+
+- Serialize Windows start/stop and reject a second managed server on any port.
+- Reject remote Ollama by default; require an explicit opt-in and document shared custom-path environment variables.
+- Rename per-answer correctness/grounding labels to keyword/page proxies; leave semantic verdict unreviewed until source comparison.
+- Record exact commit, runtime hashes, model digests, dependency versions and full responses in qualification runs.
+- Preserve adjacent bullet-list continuations across PDF pages for generation, with bounded context growth and separate page citations. Retrieval scoring is unchanged.
+- Withdraw the original artifact as HEAD qualification, mark historical q15 semantically failed, correct q12's gold page and add a 22-question semantic rubric.
+
 ## 0.2.0 — 2026-10-13
 
 - Add loopback-only API, readiness doctor, PowerShell lifecycle scripts, locked dependencies and CI.
