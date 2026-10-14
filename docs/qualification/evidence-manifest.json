@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "audit_source_commit": "ef1d506f9d2d3d9e09bf88933d5fa5550187e326",
+  "qualified_runtime_commit": "8b7149441362540085793001f2f1ea5b2fdb2cbc",
+  "artifacts": {
+    "benchmark-c3b96c6.json": {
+      "sha256": "cec7edf61a69f7f9d62be331ed4aff29e22b81ac0086753e21ff5e4758bb740e",
+      "raw_sha256": "a6ac4d9a1d4165fbd4bb075056052e43163adf0aa8e14cb6bcf128158ea969a1"
+    },
+    "benchmark-d540993.json": {
+      "sha256": "ae4287d0c047fbf724f2aacccd6fa6e2c2c60a02b7c511927e29277b79195e17",
+      "raw_sha256": "9d541fd7859ce22c5f9b8b2c5f7032fb44c1ac2d2e75544be4571ace342e9cd0"
+    },
+    "benchmark-8b71494.json": {
+      "sha256": "fc59cae029f1b646b2fff80ea7ab20dcbd52d050bd41408b38e05a06263898f8",
+      "raw_sha256": "fcad3aa99e17021b99e2869e20ff54e6a8e054c723e35e717978bf0437d49b56"
+    },
+    "integration-d540993-retry.xml": {
+      "sha256": "94197a74a1632a6797b676ce0acafdfc768eb38cbbd4c6db1a207ce36e6fb24b",
+      "raw_sha256": "d3e6e435674077108f03c58a88b51c4bd3cac9345e1761eb1ac2d17ca2258c8f"
+    },
+    "integration-8b71494.xml": {
+      "sha256": "9199cf44848582717780def1a2faff8579377469926319182336660db027951a",
+      "raw_sha256": "8380abc949302fd10ae7aee7f4111a10f5a8f3d643f542fafc9c2b09a25699b2"
+    },
+    "offline-8b71494.xml": {
+      "sha256": "65855832caf5e2aa6fcf74a61c0cdc26ae79599c7a8c7c11cadf8be5110fe388",
+      "raw_sha256": "96dcea388afe70aff0f08bd91c8ce4be54bea989a8b4f8f489d6f7bad5602f43"
+    },
+    "local-benchmark-2026-10-13.json": {
+      "sha256": "d591454849365b05f9ee0a6a588c73b20529ee8475fa70dfc378dc7d5c482f53",
+      "raw_sha256": "6894eaf0edfb1eb10c32d8906dc23a5127a9b5dbdab40b45767ac3659a0c8d06"
+    },
+    "http-smoke-8b71494.json": {
+      "sha256": "d55c67f9314c3daf10f6b053ae47d13ad72d2c933ed2beaca339b61b2f7d6241",
+      "raw_sha256": "768ab88da917fb3ff727fadd9ae81184812fbb6ccb5173b7f61a90e879004cff"
+    }
+  },
+  "junit_runtime_commits": {
+    "integration-d540993-retry.xml": "d5409933026fa5fbbed2cf61ea37a6ec7ddd26b4",
+    "integration-8b71494.xml": "8b7149441362540085793001f2f1ea5b2fdb2cbc",
+    "offline-8b71494.xml": "8b7149441362540085793001f2f1ea5b2fdb2cbc"
+  },
+  "development_review": {
+    "reviewer": "Codex",
+    "independent": false,
+    "verdicts": {
+      "c3b96c6": {
+        "q01": "pass",
+        "q02": "pass",
+        "q03": "pass",
+        "q04": "pass",
+        "q05": "pass",
+        "q06": "fail",
+        "q07": "fail",
+        "q08": "pass",
+        "q09": "pass",
+        "q10": "pass",
+        "q11": "pass",
+        "q12": "pass",
+        "q13": "pass",
+        "q14": "pass",
+        "q15": "fail",
+        "q16": "pass",
+        "q17": "pass",
+        "q18": "pass",
+        "q19": "pass",
+        "q20": "pass",
+        "q21": "pass",
+        "q22": "pass"
+      },
+      "d540993": {
+        "q01": "pass",
+        "q02": "pass",
+        "q03": "pass",
+        "q04": "pass",
+        "q05": "pass",
+        "q06": "pass",
+        "q07": "pass",
+        "q08": "pass",
+        "q09": "pass",
+        "q10": "pass",
+        "q11": "pass",
+        "q12": "pass",
+        "q13": "pass",
+        "q14": "pass",
+        "q15": "pass",
+        "q16": "pass",
+        "q17": "pass",
+        "q18": "pass",
+        "q19": "pass",
+        "q20": "pass",
+        "q21": "pass",
+        "q22": "pass"
+      },
+      "8b71494": {
+        "q01": "pass",
+        "q02": "pass",
+        "q03": "pass",
+        "q04": "pass",
+        "q05": "pass",
+        "q06": "pass",
+        "q07": "pass",
+        "q08": "pass",
+        "q09": "pass",
+        "q10": "pass",
+        "q11": "pass",
+        "q12": "pass",
+        "q13": "pass",
+        "q14": "pass",
+        "q15": "pass",
+        "q16": "pass",
+        "q17": "pass",
+        "q18": "pass",
+        "q19": "pass",
+        "q20": "pass",
+        "q21": "pass",
+        "q22": "pass"
+      }
+    }
+  },
+  "report_sha256_lf": {
+    "local-production-readiness.md": "0cfa5c9b43c94b712e65eb3b0b6c7768bc1955195c9323775cf8e1f8e862047e",
+    "semantic-review.md": "f868dc7900068b350f9dd498b20702bb5e31cdbdcd04bc6c05726583f82ebc5d",
+    "semantic-rubric.md": "27e04588b19f3891132291ef904854ebe5c23fc4a4f4a61bf33562b7448db86f",
+    "evidence-policy.md": "a981ac29bfba992912f769b1cb6bfd2b4a39c0df81bf4abd7c96cfbfa8b94eb1"
+  }
+}

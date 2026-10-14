@@ -75,6 +75,14 @@ Benchmark gồm 25 câu. Các chỉ số keyword match và citation page match c
 
 Chi tiết: [vận hành/backup/rollback](docs/operations.md), [dependency security](docs/security.md), [báo cáo kiểm chứng](docs/qualification/local-production-readiness.md).
 
+Evidence công khai là bản tối thiểu; raw lưu trong `data/runtime/` bị Git bỏ qua.
+Từ source checkout có đầy đủ lịch sử, chạy `python scripts/evidence.py verify`
+để kiểm tra SHA, metric, provenance và báo cáo mà không gọi Ollama. Xem
+[chính sách công bố](docs/qualification/evidence-policy.md) và
+[summary tự sinh](docs/qualification/evidence-summary.md). Wheel/sdist không chứa
+evidence. Verdict của Codex là đánh giá phát triển, chưa độc lập; gate blind và
+kiểm thử lặp lại cần hoàn thành trước khi tuyên bố chất lượng rộng hơn demo local.
+
 ## Giới hạn
 
 - PDF được parse dạng text; bảng phức tạp và OCR chưa được xử lý chuyên biệt.

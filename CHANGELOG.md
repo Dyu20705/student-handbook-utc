@@ -1,5 +1,12 @@
 # Changelog
 
+## PR #1 evidence publishing — 2026-10-14
+
+- Replace public raw artifacts with minimized summaries, preserve exact audit inputs locally, and distinguish public/raw SHA-256 values.
+- Exclude qualification evidence from wheel/sdist; retain historical failures and disclose that previously published Git history remains accessible.
+- Add a stdlib-only offline verifier for artifact schemas/hashes, recomputed proxies, Git/runtime provenance, JUnit outcomes and report references, including distribution checks in CI.
+- Label the Codex semantic review as non-independent development evidence; keep blind questions, independent review and repeated q15 testing as a separate gate before broader quality claims.
+
 ## PR #1 review fixes — 2026-10-13–14
 
 - Serialize Windows start/stop and reject a second managed server on any port.

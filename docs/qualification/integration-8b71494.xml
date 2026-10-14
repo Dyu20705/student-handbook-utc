@@ -1,1 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="9" time="199.128" timestamp="2026-10-14T08:05:16.618593+07:00" hostname="DESKTOP-4E5I8PE"><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_retriever" time="1.402" /><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_answerable" time="40.509" /><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_unanswerable" time="31.510" /><testcase classname="tests.integration.test_baseline_rag" name="test_scholarship_keeps_cross_page_thresholds" time="49.516" /><testcase classname="tests.test_chain" name="test_createretriever" time="0.627" /><testcase classname="tests.test_chain" name="test_createragchain" time="1.270" /><testcase classname="tests.test_chain" name="test_rag_invoke" time="70.794" /><testcase classname="tests.test_vectorstore" name="test_createvector" time="0.603" /><testcase classname="tests.test_vectorstore" name="test_similarity_search" time="0.960" /></testsuite></testsuites>
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="pytest" tests="9" errors="0" failures="0" skipped="0" time="199.128">
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_retriever" time="1.402" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_answerable" time="40.509" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_unanswerable" time="31.510" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_scholarship_keeps_cross_page_thresholds" time="49.516" />
+    <testcase classname="tests.test_chain" name="test_createretriever" time="0.627" />
+    <testcase classname="tests.test_chain" name="test_createragchain" time="1.270" />
+    <testcase classname="tests.test_chain" name="test_rag_invoke" time="70.794" />
+    <testcase classname="tests.test_vectorstore" name="test_createvector" time="0.603" />
+    <testcase classname="tests.test_vectorstore" name="test_similarity_search" time="0.960" />
+  </testsuite>
+</testsuites>

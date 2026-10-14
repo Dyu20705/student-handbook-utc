@@ -1,12 +1,23 @@
 # PR #1 — đối chiếu ngữ nghĩa sau review
 
-Người đối chiếu: Codex, đọc từng câu với PDF K67 và rubric đã commit. Đây không phải phê duyệt nghiệp vụ của UTC. Keyword/page proxy không dùng làm verdict ngữ nghĩa. Kiểm tra cả khẳng định thêm vào câu trả lời, không chỉ ý chính.
+Người đối chiếu: Codex, cùng agent tham gia sửa và kiểm chứng runtime;
+**đánh giá phát triển, không độc lập (`independent=false`)**. Đã đọc từng câu
+với PDF K67 và rubric, không dùng keyword/page proxy làm verdict ngữ nghĩa.
+Không phải phê duyệt nghiệp vụ UTC hoặc đánh giá trên câu hỏi blind.
 
-Bản tái hiện `c3b96c699dfab085642a3d08cca70ea238a51205`: `benchmark-c3b96c6.json`, SHA-256 `a6ac4d9a1d4165fbd4bb075056052e43163adf0aa8e14cb6bcf128158ea969a1`. Đã đọc đủ 22 câu: 19 đạt, 3 không đạt. q06 ghi sai “Điều 2 khoản 2”; q07 tự gán “Điều 4”; q15 thiếu điều kiện điểm lần đầu 5,0 và 15 tín chỉ. Không sửa output gốc để làm lại điểm.
+Bảng dưới giữ nguyên verdict lịch sử của ba lần chạy. [Summary được CI kiểm tra](evidence-summary.md)
+ghi tổng hợp verdict và SHA-256 **public/raw riêng biệt**. [Manifest](evidence-manifest.json)
+gắn từng file với commit audit; response và excerpt đầy đủ nằm trong audit theo
+[chính sách công bố](evidence-policy.md). JSON công khai hiện là summary schema v2,
+không phải output máy nguyên byte. Output gốc có `semantic_verdict: not_reviewed`;
+verdict đọc tay vẫn tách biệt với proxy tự động.
 
-Lần chạy trung gian `d5409933026fa5fbbed2cf61ea37a6ec7ddd26b4`: [benchmark-d540993.json](benchmark-d540993.json), SHA-256 `9d541fd7859ce22c5f9b8b2c5f7032fb44c1ac2d2e75544be4571ace342e9cd0`. Đã đọc đủ 22 câu theo [rubric](semantic-rubric.md): **22/22 đạt nội dung trong phạm vi từng câu hỏi của lần chạy này**. Sau đó, integration tái hiện q15 bỏ sót 5,0 với cùng context, nên không dùng commit này làm qualification cuối. Verdict nội dung một lần chạy không chứng minh ổn định qua các lần sinh.
-
-Runtime cuối `8b7149441362540085793001f2f1ea5b2fdb2cbc`: [benchmark-8b71494.json](benchmark-8b71494.json), SHA-256 `fcad3aa99e17021b99e2869e20ff54e6a8e054c723e35e717978bf0437d49b56`. Ngày 2026-10-14, Codex đã đọc lại đủ 22 câu trả lời cùng các excerpt được dẫn và đối chiếu theo rubric/PDF: **22/22 đạt nội dung trong phạm vi từng câu hỏi**. Cả 3 câu ngoài phạm vi đều từ chối, sources rỗng; không có lỗi vận hành. Các trường `semantic_verdict: not_reviewed` trong JSON là output máy nguyên gốc; verdict đọc tay nằm ở báo cáo này.
+Lần [c3b96c6](benchmark-c3b96c6.json) không đạt q06, q07 và q15. Lần
+[d540993](benchmark-d540993.json) đạt nội dung trong benchmark đó, nhưng
+[integration tiếp theo](integration-d540993-retry.xml) tái hiện q15 thiếu 5,0;
+không dùng làm qualification cuối. Lần [8b71494](benchmark-8b71494.json) được
+Codex đọc lại ngày 2026-10-14 theo [rubric](semantic-rubric.md), verdict chỉ áp dụng
+cho những cặp câu hỏi/câu trả lời đã quan sát. Một lần đạt không chứng minh ổn định.
 
 | Câu | Kiểm tra bắt buộc | c3b96c6 | d540993 | 8b71494 | PDF |
 | --- | --- | --- | --- | --- | --- |
@@ -44,4 +55,10 @@ Runtime cuối `8b7149441362540085793001f2f1ea5b2fdb2cbc`: [benchmark-8b71494.js
 - q06/q07 bản cuối dẫn PDF 20 và 22, không còn tự gán số Điều; q21 có bằng chứng cho cả Kỹ sư và chương trình chất lượng cao ở trang 31.
 - q23–q25 đều từ chối, sources rỗng, không có lỗi vận hành.
 
-Artifact cũ [local-benchmark-2026-10-13.json](local-benchmark-2026-10-13.json) đã gắn q15=fail và bị rút khỏi vai trò qualification HEAD; các metric cũ không đổi. Bản tái hiện c3b96c6 giữ nguyên output máy, kể cả nhãn legacy is_correct; đó là keyword proxy.
+Artifact [legacy](local-benchmark-2026-10-13.json) đã gắn q15=fail và bị rút
+khỏi qualification. Bản raw được giữ nguyên trong audit; summary công khai không
+đăng lại metric chưa đủ provenance.
+
+Gate trước tuyên bố chất lượng rộng hơn: câu hỏi blind chưa dùng để điều chỉnh,
+người review độc lập và kiểm thử q15 lặp lại theo kế hoạch định trước. Gate này còn
+mở, là follow-up riêng ngoài remediation evidence publishing/CI.

@@ -1,12 +1,10 @@
 include README.md CHANGELOG.md uv.lock
 recursive-include tests *.py
-include docs/operations.md docs/security.md docs/qualification/local-production-readiness.md
-include docs/qualification/local-benchmark-2026-10-13.json
+include docs/operations.md docs/security.md
 recursive-include scripts *.ps1
-include scripts/run_qualification.py docs/qualification/semantic-rubric.md
+include scripts/run_qualification.py scripts/evidence.py
 prune .uv-cache
 prune data
 prune .venv
 
-include docs/qualification/benchmark-*.json docs/qualification/http-smoke-*.json
-include docs/qualification/semantic-review.md docs/qualification/*.xml
+prune docs/qualification

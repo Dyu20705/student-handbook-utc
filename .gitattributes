@@ -8,3 +8,5 @@
 docs/qualification/benchmark-*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/qualification/http-smoke-*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 docs/qualification/*.xml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/qualification/evidence-manifest.json -text
+docs/qualification/local-benchmark-2026-10-13.json -text

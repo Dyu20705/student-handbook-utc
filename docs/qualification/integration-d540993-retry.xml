@@ -1,10 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="9" time="192.973" timestamp="2026-10-14T07:54:06.813747+07:00" hostname="DESKTOP-4E5I8PE"><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_retriever" time="2.361" /><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_answerable" time="53.561" /><testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_unanswerable" time="31.343" /><testcase classname="tests.integration.test_baseline_rag" name="test_scholarship_keeps_cross_page_thresholds" time="53.750"><failure message="AssertionError: assert ('5,0' in 'để được xét cấp học bổng khuyến khích học tập, sinh viên hệ chính quy phải đáp ứng các điều kiện sau:\n\nvề kết quả h...uyện đạt từ loại khá trở lên.\n\nvề kỷ luật:\n- không bị kỷ luật từ mức khiển trách trở lên trong học kỳ xét học bổng.' or '5.0' in 'để được xét cấp học bổng khuyến khích học tập, sinh viên hệ chính quy phải đáp ứng các điều kiện sau:\n\nvề kết quả h...uyện đạt từ loại khá trở lên.\n\nvề kỷ luật:\n- không bị kỷ luật từ mức khiển trách trở lên trong học kỳ xét học bổng.')">def test_scholarship_keeps_cross_page_thresholds():
-        """Regression for q15 omissions; full semantic review is still a separate gate."""
-        rag = StudentHandbookRAG()
-        result = rag.query("Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?")
-        answer = result["answer"].lower()
-        assert result["status"] == "answered"
-&gt;       assert "5,0" in answer or "5.0" in answer
-E       AssertionError: assert ('5,0' in 'để được xét cấp học bổng khuyến khích học tập, sinh viên hệ chính quy phải đáp ứng các điều kiện sau:\n\nvề kết quả h...uyện đạt từ loại khá trở lên.\n\nvề kỷ luật:\n- không bị kỷ luật từ mức khiển trách trở lên trong học kỳ xét học bổng.' or '5.0' in 'để được xét cấp học bổng khuyến khích học tập, sinh viên hệ chính quy phải đáp ứng các điều kiện sau:\n\nvề kết quả h...uyện đạt từ loại khá trở lên.\n\nvề kỷ luật:\n- không bị kỷ luật từ mức khiển trách trở lên trong học kỳ xét học bổng.')
-
-tests\integration\test_baseline_rag.py:41: AssertionError</failure></testcase><testcase classname="tests.test_chain" name="test_createretriever" time="0.613" /><testcase classname="tests.test_chain" name="test_createragchain" time="1.278" /><testcase classname="tests.test_chain" name="test_rag_invoke" time="46.214" /><testcase classname="tests.test_vectorstore" name="test_createvector" time="0.747" /><testcase classname="tests.test_vectorstore" name="test_similarity_search" time="0.796" /></testsuite></testsuites>
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites>
+  <testsuite name="pytest" tests="9" errors="0" failures="1" skipped="0" time="192.973">
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_retriever" time="2.361" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_answerable" time="53.561" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_baseline_rag_unanswerable" time="31.343" />
+    <testcase classname="tests.integration.test_baseline_rag" name="test_scholarship_keeps_cross_page_thresholds" time="53.750">
+      <failure />
+    </testcase>
+    <testcase classname="tests.test_chain" name="test_createretriever" time="0.613" />
+    <testcase classname="tests.test_chain" name="test_createragchain" time="1.278" />
+    <testcase classname="tests.test_chain" name="test_rag_invoke" time="46.214" />
+    <testcase classname="tests.test_vectorstore" name="test_createvector" time="0.747" />
+    <testcase classname="tests.test_vectorstore" name="test_similarity_search" time="0.796" />
+  </testsuite>
+</testsuites>
