@@ -11,13 +11,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Evidence verification reads the immutable audit/runtime commits.
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
-      - run: uv run --locked ruff check src tests scripts/run_qualification.py
+      - run: uv run --locked ruff check src tests scripts/run_qualification.py scripts/evidence.py
+      - name: Verify published evidence offline
+        run: uv run --locked python scripts/evidence.py verify
       - run: uv run --locked pytest -q
       - run: uv build
+      - name: Check distribution excludes evidence and private data
+        run: uv run --locked python scripts/evidence.py verify --dist dist
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
