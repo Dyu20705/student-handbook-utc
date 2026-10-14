@@ -1,5 +1,11 @@
 # Changelog
 
+## Answer completeness follow-up — 2026-10-14
+
+- Preserve the failed post-hardening benchmark and HTTP smoke locally: q15 omitted credit and subject-score requirements despite unchanged retrieval context and passing automatic proxies.
+- Add a final generation instruction to enumerate the relevant condition list, including page continuations, instead of substituting an eligibility summary. Keep model settings, retrieval and gold data unchanged.
+- Exercise the scholarship regression with three question phrasings; fresh qualification and source comparison are required for this prompt change.
+
 ## Release hardening — 2026-10-14
 
 - Add explicit frontend-origin configuration, bearer-compatible CORS preflight support, typed response schemas and browser contract regressions.

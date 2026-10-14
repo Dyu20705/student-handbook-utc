@@ -1,3 +1,5 @@
+import pytest
+
 from student_handbook_rag.chain import StudentHandbookRAG
 from student_handbook_rag.retriever import BaselineRetriever
 
@@ -34,15 +36,21 @@ def test_baseline_rag_unanswerable():
     )
 
 
-def test_scholarship_keeps_cross_page_thresholds():
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?",
+        "Để được xét học bổng khuyến khích học tập, sinh viên chính quy cần thỏa mãn những điều kiện nào? Nêu đủ cả yêu cầu về tín chỉ và điểm học phần.",
+        "Những điều kiện bắt buộc để xét học bổng khuyến khích học tập đối với sinh viên hệ chính quy là gì?",
+    ],
+)
+def test_scholarship_keeps_cross_page_thresholds(question):
     """Regression for q15 omissions; full semantic review is still a separate gate."""
     rag = StudentHandbookRAG()
-    result = rag.query(
-        "Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?"
-    )
+    result = rag.query(question)
     answer = result["answer"].lower()
     assert result["status"] == "answered"
-    assert "5,0" in answer or "5.0" in answer
+    assert "5,0" in answer or "5.0" in answer, answer
     assert "15" in answer and "ngoại ngữ tăng cường" in answer
     assert "lần thứ nhất" in answer or "lần đầu" in answer
     assert "giáo dục thể chất" in answer and "giáo dục quốc phòng" in answer

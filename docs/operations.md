@@ -75,6 +75,12 @@ new runtime. Historical metrics and failures were not rewritten, and removing th
 files from HEAD does not erase previously published Git history. No old report is
 silently relabeled as current qualification.
 
+The first post-hardening run at `0765561` matched the historical automatic proxies
+but failed q15 source comparison and the HTTP scholarship check. Its benchmark,
+HTTP response, diagnosis and semantic review remain under the local snapshot.
+The owner authorized a bounded generation-instruction follow-up; it requires its
+own committed qualification. A later pass must not replace or hide those failures.
+
 ## Processes, logs and recovery
 
 Windows scripts manage one API process per project. A second start on another port

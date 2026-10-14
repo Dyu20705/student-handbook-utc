@@ -9,7 +9,10 @@
   negation, numeric thresholds or conditions spanning pages.
 - Generation may over-refuse or vary between runs even with temperature zero.
   The q15 scholarship case has previously omitted conditions despite passing
-  keyword matching; repeated tests and source comparison remain necessary.
+  keyword matching, including a post-hardening benchmark and HTTP smoke with
+  unchanged retrieved context. A final generation instruction now requires the
+  full relevant condition list. Repeated tests and source comparison remain
+  necessary; this instruction is not a completeness guarantee.
 - The 25-question benchmark has 22 answerable and three unanswerable cases.
   Hit@k, keyword matches and citation-page matches are automatic proxies.
   Known-question development review is not an independent evaluation.
