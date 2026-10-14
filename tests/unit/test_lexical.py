@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 from langchain_core.documents import Document
+
 from student_handbook_rag.lexical import LexicalIndex
 from student_handbook_rag.retriever import BaselineRetriever
 
@@ -14,11 +15,18 @@ def test_unicode_and_exact_terms():
 
 
 def test_preserves_dense_top_three_and_adds_lexical_without_duplicates():
-    docs = [Document(page_content=text, metadata={"chunk_id": str(i)}) for i, text in enumerate(
-        ["Trường học", "Quy chế đào tạo", "Học phí", "Ứng dụng APP eUTC", "Tải APP eUTC"])]
+    docs = [
+        Document(page_content=text, metadata={"chunk_id": str(i)})
+        for i, text in enumerate(
+            ["Trường học", "Quy chế đào tạo", "Học phí", "Ứng dụng APP eUTC", "Tải APP eUTC"]
+        )
+    ]
     db = MagicMock()
-    db.get.return_value = {"documents": [d.page_content for d in docs], "metadatas": [d.metadata for d in docs]}
-    db.similarity_search_with_score.return_value = [(d, .1 * i) for i, d in enumerate(docs)]
+    db.get.return_value = {
+        "documents": [d.page_content for d in docs],
+        "metadatas": [d.metadata for d in docs],
+    }
+    db.similarity_search_with_score.return_value = [(d, 0.1 * i) for i, d in enumerate(docs)]
     retriever = BaselineRetriever(db)
     assert [d for d, _ in retriever.retrieve("APP eUTC", k=3)] == docs[:3]
     all_docs = [d.metadata["chunk_id"] for d, _ in retriever.retrieve("APP eUTC", k=5)]

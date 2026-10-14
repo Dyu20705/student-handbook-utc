@@ -1,5 +1,5 @@
-from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.chain import StudentHandbookRAG
+from student_handbook_rag.retriever import BaselineRetriever
 
 
 def test_baseline_retriever():
@@ -29,13 +29,17 @@ def test_baseline_rag_unanswerable():
     rag = StudentHandbookRAG()
     res = rag.query("Hôm nay căn tin trường UTC bán món gì?")
     assert res["is_insufficient_context"] is True
-    assert "không tìm thấy đủ thông tin" in res["answer"].lower() or "không" in res["answer"].lower()
+    assert (
+        "không tìm thấy đủ thông tin" in res["answer"].lower() or "không" in res["answer"].lower()
+    )
 
 
 def test_scholarship_keeps_cross_page_thresholds():
     """Regression for q15 omissions; full semantic review is still a separate gate."""
     rag = StudentHandbookRAG()
-    result = rag.query("Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?")
+    result = rag.query(
+        "Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?"
+    )
     answer = result["answer"].lower()
     assert result["status"] == "answered"
     assert "5,0" in answer or "5.0" in answer
@@ -45,4 +49,5 @@ def test_scholarship_keeps_cross_page_thresholds():
     assert "khá" in answer and "khiển trách" in answer
     assert {45, 46} <= {source["page"] for source in result["sources"]}
     assert {"sotaysvk67.pdf_p45_c0183", "sotaysvk67.pdf_p46_c0184"} <= {
-        source["chunk_id"] for source in result["sources"]}
+        source["chunk_id"] for source in result["sources"]
+    }

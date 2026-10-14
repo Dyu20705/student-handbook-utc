@@ -7,16 +7,15 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import List, Optional
 
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from student_handbook_rag.config import (
-    RAW_DATA_PATH,
-    CHUNK_SIZE,
     CHUNK_OVERLAP,
+    CHUNK_SIZE,
     PROJECT_ROOT,
+    RAW_DATA_PATH,
 )
 
 
@@ -35,7 +34,7 @@ def resolve_data_path(filename: str = RAW_DATA_PATH) -> str:
 
 def clean_page_text(text: str) -> str:
     """Clean extracted page text by removing recurring headers/footers and excess whitespace.
-    
+
     Examples of footers in UTC handbook:
         '8 * STSV', 'STSV * 29', '0 * STSV'
     """
@@ -43,28 +42,28 @@ def clean_page_text(text: str) -> str:
         return ""
 
     # Remove running footer patterns: e.g., 'STSV * 5', '5 * STSV', 'STSV * 29'
-    text = re.sub(r'(?i)\bSTSV\s*\*\s*\d+\b', '', text)
-    text = re.sub(r'(?i)\b\d+\s*\*\s*STSV\b', '', text)
+    text = re.sub(r"(?i)\bSTSV\s*\*\s*\d+\b", "", text)
+    text = re.sub(r"(?i)\b\d+\s*\*\s*STSV\b", "", text)
 
     # Normalize whitespace
-    text = text.replace('\r\n', '\n').replace('\r', '\n')
-    text = re.sub(r'[ \t]+', ' ', text)
-    text = re.sub(r'\n{3,}', '\n\n', text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
 
     return text.strip()
 
 
-def detect_section_heading(text: str) -> Optional[str]:
+def detect_section_heading(text: str) -> str | None:
     """Detect section or chapter heading in a page to maintain section context."""
     patterns = [
-        r'^\s*(PHẦN\s+[0-9IVX]+(?:\.[0-9]+)?[:.]?\s*[^\n]+)',
-        r'^\s*(Chương\s+[IVXLCDM0-9]+[:.]?\s*[^\n]+)',
-        r'^\s*(Điều\s+[0-9]+[:.]?\s*[^\n]+)',
-        r'^\s*([I|V|XLCDM]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)',
-        r'^\s*([0-9]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)',
+        r"^\s*(PHẦN\s+[0-9IVX]+(?:\.[0-9]+)?[:.]?\s*[^\n]+)",
+        r"^\s*(Chương\s+[IVXLCDM0-9]+[:.]?\s*[^\n]+)",
+        r"^\s*(Điều\s+[0-9]+[:.]?\s*[^\n]+)",
+        r"^\s*([I|V|XLCDM]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)",
+        r"^\s*([0-9]+\.\s+[A-ZÀ-Ỹ\s]{3,}[^\n]*)",
     ]
 
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         line_clean = line.strip()
         if not line_clean:
             continue
@@ -75,10 +74,11 @@ def detect_section_heading(text: str) -> Optional[str]:
     return None
 
 
-def _extract_pdf_pages_text(file_path: str) -> List[str]:
+def _extract_pdf_pages_text(file_path: str) -> list[str]:
     """Extract raw text of each page from PDF using pypdf, falling back to pdftotext."""
     try:
         import pypdf
+
         reader = pypdf.PdfReader(file_path)
         pages_text = [page.extract_text() or "" for page in reader.pages]
         if any(t.strip() for t in pages_text):
@@ -87,16 +87,18 @@ def _extract_pdf_pages_text(file_path: str) -> List[str]:
         print(f"[PDF Loader] pypdf failed or unavailable ({e}), attempting pdftotext fallback...")
 
     try:
-        output = subprocess.check_output(["pdftotext", file_path, "-"], text=True, encoding="utf-8", timeout=60)
-        return output.split('\x0c')
+        output = subprocess.check_output(
+            ["pdftotext", file_path, "-"], text=True, encoding="utf-8", timeout=60
+        )
+        return output.split("\x0c")
     except Exception as e:
-        raise RuntimeError(f"Could not load PDF {file_path} using pypdf or pdftotext: {e}")
+        raise RuntimeError(f"Could not load PDF {file_path} using pypdf or pdftotext: {e}") from e
 
 
-def load_pdf_pages(file_path: str) -> List[Document]:
+def load_pdf_pages(file_path: str) -> list[Document]:
     """Extract pages from PDF and wrap into Document instances with metadata."""
     raw_pages = _extract_pdf_pages_text(file_path)
-    documents: List[Document] = []
+    documents: list[Document] = []
     doc_name = os.path.basename(file_path)
     current_section = "Mở đầu"
 
@@ -120,14 +122,14 @@ def load_pdf_pages(file_path: str) -> List[Document]:
                 "page": page_num,
                 "book_page": book_page,
                 "section": current_section,
-            }
+            },
         )
         documents.append(doc)
 
     return documents
 
 
-def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:
+def ragload(filename: str = RAW_DATA_PATH) -> list[Document]:
     """Universal document loader for handbook files (.pdf or .txt)."""
     resolved_path = resolve_data_path(filename)
     if not os.path.exists(resolved_path):
@@ -137,7 +139,12 @@ def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:
     if ext == ".pdf":
         return load_pdf_pages(resolved_path)
     elif ext == ".txt":
-        docs = [Document(page_content=Path(resolved_path).read_text(encoding="utf-8"), metadata={"source": resolved_path})]
+        docs = [
+            Document(
+                page_content=Path(resolved_path).read_text(encoding="utf-8"),
+                metadata={"source": resolved_path},
+            )
+        ]
         # Add basic metadata to text documents
         for doc in docs:
             doc.metadata["document"] = os.path.basename(resolved_path)
@@ -149,10 +156,10 @@ def ragload(filename: str = RAW_DATA_PATH) -> List[Document]:
 
 
 def ragchunking(
-    documents: List[Document],
+    documents: list[Document],
     chunk_size: int = CHUNK_SIZE,
     chunk_overlap: int = CHUNK_OVERLAP,
-) -> List[Document]:
+) -> list[Document]:
     """Split documents into semantic chunks with unique chunk_id and full metadata preservation."""
     if chunk_size <= 0 or not 0 <= chunk_overlap < chunk_size:
         raise ValueError("Require chunk_size > 0 and 0 <= chunk_overlap < chunk_size")
@@ -173,7 +180,7 @@ def ragchunking(
     )
     raw_chunks = splitter.split_documents(documents)
 
-    final_chunks: List[Document] = []
+    final_chunks: list[Document] = []
     for idx, chunk in enumerate(raw_chunks):
         doc_name = chunk.metadata.get("document", "doc")
         page = chunk.metadata.get("page", 1)
@@ -187,13 +194,3 @@ def ragchunking(
         final_chunks.append(Document(page_content=chunk.page_content, metadata=metadata))
 
     return final_chunks
-
-
-if __name__ == "__main__":
-    docs = ragload()
-    print(f"Loaded {len(docs)} pages from {RAW_DATA_PATH}")
-    chunks = ragchunking(docs)
-    print(f"Generated {len(chunks)} chunks (size={CHUNK_SIZE}, overlap={CHUNK_OVERLAP})")
-    if chunks:
-        print("\nSample Chunk 0 Metadata:", chunks[0].metadata)
-        print("Sample Chunk 0 Content preview:\n", chunks[0].page_content[:200])

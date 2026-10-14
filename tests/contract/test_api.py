@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import MagicMock
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from student_handbook_rag.api import create_app
 from student_handbook_rag.chain import StudentHandbookRAG
@@ -12,15 +12,22 @@ from student_handbook_rag.chain import StudentHandbookRAG
 @pytest.fixture
 def engine():
     rag = MagicMock()
-    rag.query.return_value = {"query": "q", "answer": "Thông tin", "sources": [],
-                              "retrieved_chunks": [], "is_insufficient_context": False,
-                              "status": "answered"}
+    rag.query.return_value = {
+        "query": "q",
+        "answer": "Thông tin",
+        "sources": [],
+        "retrieved_chunks": [],
+        "is_insufficient_context": False,
+        "status": "answered",
+    }
     return rag
 
 
 @pytest.fixture
 def client(engine):
-    with TestClient(create_app(lambda: engine, lambda: None, lambda _: None), base_url="http://127.0.0.1") as client:
+    with TestClient(
+        create_app(lambda: engine, lambda: None, lambda _: None), base_url="http://127.0.0.1"
+    ) as client:
         yield client
 
 
@@ -33,9 +40,16 @@ def test_health_query_and_privacy_headers(client):
     assert response.headers["cache-control"] == "no-store"
 
 
-@pytest.mark.parametrize("payload", [{"question": " "}, {"question": "a" * 2001},
-                                     {"question": "q", "k": 11}, {"question": "q", "k": True},
-                                     {"question": "q", "extra": "field"}])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"question": " "},
+        {"question": "a" * 2001},
+        {"question": "q", "k": 11},
+        {"question": "q", "k": True},
+        {"question": "q", "extra": "field"},
+    ],
+)
 def test_input_validation(client, payload):
     assert client.post("/ask", json=payload).status_code == 422
 
@@ -46,15 +60,27 @@ def test_oversized_chunked_body(client):
 
 
 def test_external_origin_and_dns_rebinding_denied(client):
-    assert client.post("/ask", json={"question": "q"}, headers={"origin": "https://evil.example"}).status_code == 403
+    assert (
+        client.post(
+            "/ask", json={"question": "q"}, headers={"origin": "https://evil.example"}
+        ).status_code
+        == 403
+    )
     assert client.get("/health", headers={"host": "evil.example"}).status_code == 400
 
 
 def test_api_key_when_configured(engine, monkeypatch):
     monkeypatch.setenv("RAG_API_KEY", "test-key")
-    with TestClient(create_app(lambda: engine, index_check=lambda _: None), base_url="http://127.0.0.1") as client:
+    with TestClient(
+        create_app(lambda: engine, index_check=lambda _: None), base_url="http://127.0.0.1"
+    ) as client:
         assert client.post("/ask", json={"question": "q"}).status_code == 401
-        assert client.post("/ask", json={"question": "q"}, headers={"authorization": "Bearer test-key"}).status_code == 200
+        assert (
+            client.post(
+                "/ask", json={"question": "q"}, headers={"authorization": "Bearer test-key"}
+            ).status_code
+            == 200
+        )
 
 
 def test_operational_error_returns_503(client, engine):
@@ -65,6 +91,7 @@ def test_operational_error_returns_503(client, engine):
 def test_ready_checks_dependencies(engine):
     def unavailable():
         raise ConnectionError("private details")
+
     with TestClient(create_app(lambda: engine, unavailable), base_url="http://127.0.0.1") as client:
         response = client.get("/ready")
         assert response.status_code == 503
@@ -73,11 +100,15 @@ def test_ready_checks_dependencies(engine):
 
 
 def test_ready_requires_active_generation_and_source(engine, monkeypatch):
-    monkeypatch.setattr("student_handbook_rag.api.read_manifest", lambda: {"collection": "active", "chunk_count": 2})
+    monkeypatch.setattr(
+        "student_handbook_rag.api.read_manifest", lambda: {"collection": "active", "chunk_count": 2}
+    )
     monkeypatch.setattr("student_handbook_rag.api.validate_source", lambda manifest: None)
     engine.retriever.vector_db._collection.name = "active"
     engine.retriever.vector_db._collection.count.return_value = 2
-    with TestClient(create_app(lambda: engine, lambda: None), base_url="http://127.0.0.1") as client:
+    with TestClient(
+        create_app(lambda: engine, lambda: None), base_url="http://127.0.0.1"
+    ) as client:
         assert client.get("/ready").status_code == 200
         engine.retriever.vector_db._collection.name = "old"
         assert client.get("/ready").status_code == 503

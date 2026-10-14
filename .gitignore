@@ -34,3 +34,6 @@ data/chroma/
 dist/
 build/
 data/runtime/
+
+# Generated evaluation output; the reviewed gold set remains tracked.
+data/benchmark/eval_results*.json

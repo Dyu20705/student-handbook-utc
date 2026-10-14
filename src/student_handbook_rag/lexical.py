@@ -1,8 +1,9 @@
 """Small in-memory BM25 index for the local handbook, preserving Vietnamese accents."""
-from collections import Counter
+
 import math
 import re
 import unicodedata
+from collections import Counter
 
 
 def tokenize(text):
@@ -26,8 +27,10 @@ class LexicalIndex:
                 if not frequency:
                     continue
                 df = self.frequencies[term]
-                idf = math.log(1 + (len(self.documents) - df + .5) / (df + .5))
-                denominator = frequency + 1.5 * (.25 + .75 * self.lengths[index] / self.average_length)
+                idf = math.log(1 + (len(self.documents) - df + 0.5) / (df + 0.5))
+                denominator = frequency + 1.5 * (
+                    0.25 + 0.75 * self.lengths[index] / self.average_length
+                )
                 score += idf * frequency * 2.5 / denominator
             if score:
                 scored.append((index, score))

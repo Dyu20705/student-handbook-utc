@@ -1,34 +1,67 @@
-# Dependency security — local baseline
+# Security scope
 
-Kiểm tra ngày 2026-10-13. Runtime chỉ bind 127.0.0.1, Chroma dùng embedded PersistentClient; không chạy `chroma run`, không expose `/api/v2/tenants/...`, không nhận embedding function/model repository hoặc `trust_remote_code` từ HTTP. API không có upload/ingest/admin endpoint. Không dùng cấu hình này làm multi-tenant service.
+The API binds to `127.0.0.1`, uses one worker and embedded Chroma, and trusts the
+local operator. It has no upload, ingestion, tenant or administrative HTTP endpoints.
+Do not expose it to a LAN/Internet or run a Chroma HTTP server under this policy.
 
-Requests được ràng buộc >=2.33 để xử lý [CVE-2026-25645](https://github.com/psf/requests/security/advisories/GHSA-gc5v-m9x4-r6x2). Tiện ích arxiv nghiên cứu không nằm trong runtime vì pin Requests cũ.
+Trusted Host checks limit DNS rebinding. An exact browser-origin allowlist defaults
+to empty; untrusted origins are rejected before inference. Optional bearer auth
+protects `/ask`, with constant-time comparison. CORS is not authentication against
+non-browser clients. There is no TLS termination, role-based access control or
+distributed quota. Request body, question length, top-k, rate and concurrency are
+bounded. See the [API contract](api.md).
 
-Audit thô Chroma 1.5.9 vẫn báo các advisory không có fix version trong cơ sở dữ liệu:
+Ollama URLs must be loopback unless `RAG_ALLOW_REMOTE_OLLAMA=1` explicitly permits
+sending questions/context off-machine. Clients ignore environment proxies. The
+service does not accept model repository or embedding-function configuration from
+HTTP callers. Keep `.env`, keys, raw answers and diagnostic artifacts out of Git.
 
-| ID | Phạm vi | Đánh giá cho cấu hình hiện tại |
+## Dependency exceptions
+
+The locked dependency audit retains four scoped Chroma exceptions. They apply only
+to this embedded deployment, not to arbitrary use of the package.
+
+| Advisory | Affected surface | Reason for local exception |
 | --- | --- | --- |
-| PYSEC-2026-311 / CVE-2026-45829 | Python HTTP server tạo collection với model repository không tin cậy | Không có server/route này trong ứng dụng |
-| PYSEC-2026-3814 / CVE-2026-45833 | HTTP update collection cho phép code injection | Không có update collection endpoint hoặc remote model |
-| PYSEC-2026-3815 / CVE-2026-45831 | SimpleRBACAuthorizationProvider bỏ qua scope | Không dùng RBAC hoặc multi-tenant server |
-| PYSEC-2026-3813 / CVE-2026-45830 | Authorization tenant của HTTP server | Không có tenant API |
+| PYSEC-2026-311 / CVE-2026-45829 | Python HTTP collection creation with an untrusted model repository | That server/route is not exposed |
+| PYSEC-2026-3814 / CVE-2026-45833 | HTTP collection update code injection | No update endpoint or untrusted remote model configuration |
+| PYSEC-2026-3815 / CVE-2026-45831 | SimpleRBACAuthorizationProvider scope bypass | No RBAC/multi-tenant server |
+| PYSEC-2026-3813 / CVE-2026-45830 | HTTP tenant authorization | No tenant API |
 
-Đây là ngoại lệ có phạm vi cho vận hành nhúng, không phải khẳng định package hết lỗ hổng. CI chỉ bỏ qua bốn ID này; lỗ hổng khác vẫn fail. Đánh giá lại trước mỗi release, khi đổi kiến trúc và chậm nhất 2026-11-13. Nếu bật Chroma server hoặc cho người không tin cậy cấu hình embedding, các ngoại lệ mất hiệu lực và chặn phát hành.
-
-[Advisory gốc CVE-2026-45829](https://github.com/advisories/GHSA-f4j7-r4q5-qw2c).
-
-Lệnh audit đầy đủ (có thể exit 1 do advisory Chroma):
-
-```powershell
-uv run --locked pip-audit --local --skip-editable
-```
-
-Lệnh đối chiếu ngoại lệ đúng cấu hình này:
+Review before every release, when deployment scope changes, and no later than
+**2026-11-13**. CI fails once that review date expires. Enabling the Chroma server
+or accepting untrusted embedding configuration invalidates these exceptions and
+blocks release. Other vulnerabilities still fail the audit. The exceptions are
+not a claim that Chroma has no vulnerabilities.
 
 ```powershell
-uv run --locked pip-audit --local --skip-editable --ignore-vuln PYSEC-2026-311 --ignore-vuln PYSEC-2026-3814 --ignore-vuln PYSEC-2026-3815 --ignore-vuln PYSEC-2026-3813
+uv run --locked python -m pip_audit --local --skip-editable
+uv run --locked python -m pip_audit --local --skip-editable --ignore-vuln PYSEC-2026-311 --ignore-vuln PYSEC-2026-3814 --ignore-vuln PYSEC-2026-3815 --ignore-vuln PYSEC-2026-3813
 ```
 
-API chống DNS rebinding bằng TrustedHost, từ chối Origin khác host, giới hạn body/câu hỏi/top-k/rate và một inference đồng thời. API key tùy chọn chỉ phù hợp máy local. Không cung cấp auth phân quyền, TLS termination hay quota phân tán để triển khai Internet.
+Requests remains constrained to >=2.33 for its documented
+[temporary-file advisory](https://github.com/psf/requests/security/advisories/GHSA-gc5v-m9x4-r6x2).
+No blanket dependency upgrade is part of this hardening; removed optional research
+dependencies are pruned from the lockfile.
 
-Ollama mặc định chỉ kết nối IP loopback hoặc `localhost`; LAN, wildcard và hostname khác bị chặn trước I/O. `RAG_ALLOW_REMOTE_OLLAMA=1` là opt-in rõ ràng để gửi câu hỏi và context ra endpoint remote. Cấu hình remote không nằm trong qualification local. HTTP client không dùng proxy môi trường và không tự theo redirect.
+## Repository and distribution checks
+
+CI pins Actions to full commit SHAs, uses read-only repository permissions, runs
+actionlint, and scans Git history with redacted gitleaks output. Tool binaries are
+versioned and checksum-verified. These checks do not erase any historical data.
+Pinning follows [GitHub's security guidance](https://docs.github.com/en/actions/reference/security/secure-use).
+
+The first full-history scan found six `generic-api-key` false positives: SHA-256
+values for `src/student_handbook_rag/api.py` in three benchmark artifacts at each
+of commits `ef1d506` and `2b423df`. Each value was verified against the recorded
+runtime source bytes (using preserved original line endings for the raw reports).
+`.gitleaksignore` permits only those six exact commit/file/rule/line fingerprints,
+not a path or rule in general. Review these exceptions by **2026-11-13** along with
+the dependency exceptions. New findings still block CI. PDF text conversion is
+disabled during history scanning; binary PDF contents are outside this text scan.
+
+`scripts/check_distribution.py` allows reviewed wheel/sdist members and known
+metadata only. Unknown files, symlinks, duplicate members and unsafe paths fail.
+PDFs, benchmark data, evidence, research and runtime files are excluded. Inventory
+validation complements secret scanning and code review; it cannot prove the contents
+of an approved file are safe. Local evidence must be backed up separately.

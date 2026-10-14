@@ -7,9 +7,10 @@ Usage:
 
 import argparse
 import sys
+
 from student_handbook_rag.chain import StudentHandbookRAG
-from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.config import RETRIEVAL_K
+from student_handbook_rag.retriever import BaselineRetriever
 
 
 def print_response(result: dict, debug: bool = False, retriever: BaselineRetriever = None):
@@ -19,14 +20,18 @@ def print_response(result: dict, debug: bool = False, retriever: BaselineRetriev
     print("Sources:")
     if result["sources"]:
         for s in result["sources"]:
-            print(f"  - {s['document']} | Page: {s['page']} (Book page: {s['book_page']}) | Section: {s['section']} | Score: {s['score']:.4f}")
+            print(
+                f"  - {s['document']} | Page: {s['page']} (Book page: {s['book_page']}) | Section: {s['section']} | Context rank: {s['context_rank']}"
+            )
     else:
         print("  (No relevant sources found)")
 
     if debug:
         print("\n--- Debug: Retrieved Chunks ---")
         # Sources are a cited subset, not a one-to-one map of all retrieved chunks.
-        scored_pairs = [(doc, float(rank)) for rank, doc in enumerate(result["retrieved_chunks"], 1)]
+        scored_pairs = [
+            (doc, float(rank)) for rank, doc in enumerate(result["retrieved_chunks"], 1)
+        ]
         if retriever:
             print(retriever.format_retrieval_debug(result["query"], scored_pairs))
 
@@ -43,7 +48,7 @@ def main():
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Display detailed retrieved chunks, similarity scores, and metadata.",
+        help="Display retrieved chunks, context ranks, and local metadata.",
     )
     parser.add_argument(
         "-k",
@@ -62,7 +67,10 @@ def main():
         retriever = BaselineRetriever(k=args.top_k)
         rag = StudentHandbookRAG(retriever=retriever)
     except Exception as exc:
-        print(f"Startup failed ({type(exc).__name__}). Run utc-doctor and utc-ingest.", file=sys.stderr)
+        print(
+            f"Startup failed ({type(exc).__name__}). Run utc-doctor and utc-ingest.",
+            file=sys.stderr,
+        )
         return 1
     print("[Init] System ready.\n")
 

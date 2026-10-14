@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
+
 from langchain_core.documents import Document
+
 from student_handbook_rag.chain import StudentHandbookRAG
 
 
@@ -34,7 +36,13 @@ def test_unanswerable_refusal_detection():
     """Verify that refusal response is correctly classified as is_insufficient_context."""
     mock_retriever = MagicMock()
     mock_retriever.retrieve.return_value = [
-        (Document(page_content="Nội dung không liên quan.", metadata={"document": "sotaysvk67.pdf", "page": 1, "section": "Chung"}), 1.2)
+        (
+            Document(
+                page_content="Nội dung không liên quan.",
+                metadata={"document": "sotaysvk67.pdf", "page": 1, "section": "Chung"},
+            ),
+            1.2,
+        )
     ]
     mock_llm = MagicMock()
     rag = StudentHandbookRAG(retriever=mock_retriever, llm=mock_llm)

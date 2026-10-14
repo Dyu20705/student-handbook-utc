@@ -1,5 +1,15 @@
 # Changelog
 
+## Release hardening — 2026-10-14
+
+- Add explicit frontend-origin configuration, bearer-compatible CORS preflight support, typed response schemas and browser contract regressions.
+- Preserve response field names while replacing machine paths with document identifiers; expose retrieval/context ranks and retain the legacy score field.
+- Archive historical evidence and research before removing them from the release tree; remove optional experimental modules, unused prompts/wrappers and unverified TXT data.
+- Remove the unused chunking experiment entry point and write generated evaluation output under ignored `data/runtime/` by default.
+- Replace the fixed-runtime evidence CI gate with reproducible offline checks and a standalone strict distribution verifier. New runtime qualification remains a separate local gate.
+- Consolidate English documentation, strengthen lint/format checks, pin Actions and audit tools, and add history secret scanning and workflow validation.
+- Preserve the K67 PDF, gold benchmark, Vietnamese generation prompt, model settings and retrieval behavior; prune only unused optional dependencies.
+
 ## PR #1 evidence publishing — 2026-10-14
 
 - Restrict wheel/sdist members to reviewed file allowlists with explicit metadata exceptions; reject unlisted snapshots even inside package/test/metadata directories, links and duplicate members.

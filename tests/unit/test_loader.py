@@ -1,25 +1,31 @@
+from student_handbook_rag.config import RAW_PDF_PATH
 from student_handbook_rag.loader import (
-    ragload,
-    ragchunking,
     clean_page_text,
     detect_section_heading,
+    ragchunking,
+    ragload,
 )
-from student_handbook_rag.config import RAW_PDF_PATH, LEGACY_TXT_PATH
 
 
-def test_load_legacy_txt():
-    """Verify legacy handbook.txt loads correctly with backwards compatibility."""
-    docs = ragload(LEGACY_TXT_PATH)
+def test_load_utf8_text(tmp_path):
+    source = tmp_path / "fixture.txt"
+    content = "Synthetic test fixture: sinh viên sử dụng thư viện.\n" * 30
+    source.write_text(content, encoding="utf-8")
+    docs = ragload(str(source))
     assert len(docs) == 1
-    assert len(docs[0].page_content) == 8126
-    assert docs[0].metadata["document"] == "handbook.txt"
+    assert docs[0].page_content == content
+    assert docs[0].metadata["document"] == "fixture.txt"
 
 
-def test_chunk_legacy_txt():
-    """Verify chunking backward compatibility when specifying old parameters."""
-    docs = ragload(LEGACY_TXT_PATH)
+def test_chunk_text_preserves_metadata(tmp_path):
+    source = tmp_path / "fixture.txt"
+    source.write_text(
+        "Synthetic test fixture: sinh viên sử dụng thư viện.\n" * 30, encoding="utf-8"
+    )
+    docs = ragload(str(source))
     chunks = ragchunking(docs, chunk_size=100, chunk_overlap=20)
-    assert len(chunks) > 100
+    assert len(chunks) > 1
+    assert all(chunk.metadata["document"] == "fixture.txt" for chunk in chunks)
     assert "chunk_id" in chunks[0].metadata
 
 
@@ -35,9 +41,17 @@ def test_clean_page_text():
 
 def test_detect_section_heading():
     """Verify section heading detection regex."""
-    assert detect_section_heading("PHẦN 2.1. QUY CHẾ ĐÀO TẠO ĐẠI HỌC") == "PHẦN 2.1. QUY CHẾ ĐÀO TẠO ĐẠI HỌC"
-    assert detect_section_heading("Điều 9. Đánh giá và tính điểm học phần") == "Điều 9. Đánh giá và tính điểm học phần"
-    assert detect_section_heading("VIII. THƯ VIỆN TRƯỜNG ĐH GTVT") == "VIII. THƯ VIỆN TRƯỜNG ĐH GTVT"
+    assert (
+        detect_section_heading("PHẦN 2.1. QUY CHẾ ĐÀO TẠO ĐẠI HỌC")
+        == "PHẦN 2.1. QUY CHẾ ĐÀO TẠO ĐẠI HỌC"
+    )
+    assert (
+        detect_section_heading("Điều 9. Đánh giá và tính điểm học phần")
+        == "Điều 9. Đánh giá và tính điểm học phần"
+    )
+    assert (
+        detect_section_heading("VIII. THƯ VIỆN TRƯỜNG ĐH GTVT") == "VIII. THƯ VIỆN TRƯỜNG ĐH GTVT"
+    )
     assert detect_section_heading("1. GIỚI THIỆU CHUNG") == "1. GIỚI THIỆU CHUNG"
     assert detect_section_heading("Chỉ là một dòng văn bản bình thường.") is None
 

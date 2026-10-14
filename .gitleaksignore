@@ -1,0 +1,9 @@
+# Six verified SHA-256 values of api.py in immutable historical qualification files.
+# Compared to the recorded runtime bytes, including preserved original line endings.
+# Exact commit/file/rule/line fingerprints only; rationale and review by 2026-11-13 in docs/security.md.
+2b423df7de66d07ae4142726045f9e4c13db911d:docs/qualification/benchmark-c3b96c6.json:generic-api-key:15
+2b423df7de66d07ae4142726045f9e4c13db911d:docs/qualification/benchmark-8b71494.json:generic-api-key:15
+2b423df7de66d07ae4142726045f9e4c13db911d:docs/qualification/benchmark-d540993.json:generic-api-key:15
+ef1d506f9d2d3d9e09bf88933d5fa5550187e326:docs/qualification/benchmark-8b71494.json:generic-api-key:13
+ef1d506f9d2d3d9e09bf88933d5fa5550187e326:docs/qualification/benchmark-c3b96c6.json:generic-api-key:13
+ef1d506f9d2d3d9e09bf88933d5fa5550187e326:docs/qualification/benchmark-d540993.json:generic-api-key:13

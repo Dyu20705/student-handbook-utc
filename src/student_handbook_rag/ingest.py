@@ -7,17 +7,20 @@ Usage:
 import argparse
 import sys
 import time
+
 from student_handbook_rag.config import (
-    RAW_DATA_PATH,
     CHROMA_DEFAULT_DIR,
-    CHUNK_SIZE,
     CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    RAW_DATA_PATH,
 )
 from student_handbook_rag.vectorstore import build_vector_store
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest UTC Student Handbook into Chroma vector store.")
+    parser = argparse.ArgumentParser(
+        description="Ingest UTC Student Handbook into Chroma vector store."
+    )
     parser.add_argument(
         "--force",
         action="store_true",
@@ -72,6 +75,7 @@ def main():
         print(f"Total indexed chunks: {total_docs}")
         if args.data_path != RAW_DATA_PATH or args.persist_dir != CHROMA_DEFAULT_DIR:
             from pathlib import Path
+
             print("CLI path overrides apply only to this ingestion. Before doctor/ask/serve, set:")
             print(f"RAG_DATA_PATH={Path(args.data_path).resolve()}")
             print(f"RAG_CHROMA_DIR={Path(args.persist_dir).resolve()}")

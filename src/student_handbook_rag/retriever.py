@@ -2,20 +2,20 @@
 Encapsulates dense top-k similarity retrieval, score tracking, and debug formatting.
 """
 
-from typing import List, Tuple, Optional
 import re
-from langchain_core.documents import Document
-from langchain_chroma import Chroma
 
-from student_handbook_rag.config import RETRIEVAL_K, MAX_RETRIEVAL_K
-from student_handbook_rag.vectorstore import build_vector_store, similarity_search_with_scores
+from langchain_chroma import Chroma
+from langchain_core.documents import Document
+
+from student_handbook_rag.config import MAX_RETRIEVAL_K, RETRIEVAL_K
 from student_handbook_rag.lexical import LexicalIndex
+from student_handbook_rag.vectorstore import build_vector_store, similarity_search_with_scores
 
 
 class BaselineRetriever:
     """Baseline dense retriever querying ChromaDB with top-k similarity."""
 
-    def __init__(self, vector_db: Optional[Chroma] = None, k: int = RETRIEVAL_K):
+    def __init__(self, vector_db: Chroma | None = None, k: int = RETRIEVAL_K):
         if not 1 <= k <= MAX_RETRIEVAL_K:
             raise ValueError("k must be between 1 and 10")
         self.vector_db = vector_db if vector_db is not None else build_vector_store(load_only=True)
@@ -23,22 +23,30 @@ class BaselineRetriever:
         records = self.vector_db.get(include=["documents", "metadatas"])
         documents = [
             Document(page_content=text, metadata=metadata)
-            for text, metadata in zip(records["documents"], records["metadatas"])
+            for text, metadata in zip(records["documents"], records["metadatas"], strict=True)
         ]
         self.lexical = LexicalIndex(documents)
         self._chunks = {
-            (doc.metadata.get("source", doc.metadata.get("document")), doc.metadata["chunk_index"]): doc
-            for doc in documents if isinstance(doc.metadata.get("chunk_index"), int)
+            (
+                doc.metadata.get("source", doc.metadata.get("document")),
+                doc.metadata["chunk_index"],
+            ): doc
+            for doc in documents
+            if isinstance(doc.metadata.get("chunk_index"), int)
         }
 
-    def retrieve(self, query: str, k: Optional[int] = None) -> List[Tuple[Document, float]]:
+    def retrieve(self, query: str, k: int | None = None) -> list[tuple[Document, float]]:
         """Retrieve top-k relevant documents with their similarity scores.
-        
+
         Returns:
             List of (Document, score) tuples.
         """
         top_k = k if k is not None else self.k
-        if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= MAX_RETRIEVAL_K:
+        if (
+            not isinstance(top_k, int)
+            or isinstance(top_k, bool)
+            or not 1 <= top_k <= MAX_RETRIEVAL_K
+        ):
             raise ValueError("k must be between 1 and 10")
         if not query or not query.strip():
             return []
@@ -57,7 +65,9 @@ class BaselineRetriever:
                 break
         return selected
 
-    def complete_page_bullets(self, selected: List[Tuple[Document, float]]) -> List[Tuple[Document, float]]:
+    def complete_page_bullets(
+        self, selected: list[tuple[Document, float]]
+    ) -> list[tuple[Document, float]]:
         """Add at most two adjacent chunks when a bullet list crosses a PDF page.
 
         Generation uses this context; retrieval metrics still score the original
@@ -74,22 +84,25 @@ class BaselineRetriever:
             if added == 2 or not isinstance(index, int) or not isinstance(page, int):
                 continue
             following = chunks.get((meta.get("source", meta.get("document")), index + 1))
-            if (following is None or following.metadata.get("page") != page + 1
-                    or following.metadata.get("chunk_id") in seen
-                    or not re.match(r"^[+•-]\s", following.page_content.lstrip())):
+            if (
+                following is None
+                or following.metadata.get("page") != page + 1
+                or following.metadata.get("chunk_id") in seen
+                or not re.match(r"^[+•-]\s", following.page_content.lstrip())
+            ):
                 continue
             expanded.append((following, float(len(expanded) + 1)))
             seen.add(following.metadata["chunk_id"])
             added += 1
         return expanded
 
-    def retrieve_documents(self, query: str, k: Optional[int] = None) -> List[Document]:
+    def retrieve_documents(self, query: str, k: int | None = None) -> list[Document]:
         """Retrieve top-k documents (without scores, for standard LangChain interfaces)."""
         scored_docs = self.retrieve(query, k=k)
         return [doc for doc, _ in scored_docs]
 
     @staticmethod
-    def format_retrieval_debug(query: str, results: List[Tuple[Document, float]]) -> str:
+    def format_retrieval_debug(query: str, results: list[tuple[Document, float]]) -> str:
         """Format retrieval results into structured debug text."""
         lines = [f"QUERY: '{query}'", f"FOUND {len(results)} CHUNKS:\n" + "=" * 50]
         for idx, (doc, score) in enumerate(results, start=1):
@@ -102,7 +115,9 @@ class BaselineRetriever:
             chunk_id = meta.get("chunk_id", "N/A")
 
             lines.append(f"RESULT #{idx}")
-            lines.append(f"  Score:       {score:.4f} (retrieval rank; lower = earlier; not confidence)")
+            lines.append(
+                f"  Score:       {score:.4f} (retrieval rank; lower = earlier; not confidence)"
+            )
             lines.append(f"  Document:    {document} (Path: {source})")
             lines.append(f"  PDF Page:    {page} (Book Page: {book_page})")
             lines.append(f"  Section:     {section}")
@@ -110,10 +125,3 @@ class BaselineRetriever:
             lines.append(f"  Content:\n    {doc.page_content.strip()}")
             lines.append("-" * 50)
         return "\n".join(lines)
-
-
-if __name__ == "__main__":
-    retriever = BaselineRetriever()
-    test_q = "Quy định về học bổng khuyến khích học tập"
-    res = retriever.retrieve(test_q, k=3)
-    print(retriever.format_retrieval_debug(test_q, res))

@@ -1,50 +1,113 @@
-# Vận hành local
+# Local operations
 
-## Quy trình phát hành
+## Release checks
 
-1. Giữ `uv.lock` cùng mã nguồn; cài `uv sync --locked --python 3.12`. Không nâng dependencies ngầm khi khởi động.
-2. Chạy Ruff, offline tests, integration tests, dependency audit và benchmark `--check-proxies` theo README. Commit runtime rồi chạy `scripts/run_qualification.py` trên checkout sạch để lưu provenance.
-3. Đọc toàn bộ 22 câu answerable với trang PDF nguồn; ghi verdict từng câu và SHA-256 artifact. Kiểm tra đầy đủ điều kiện bắt buộc, phủ định, đối tượng và ngưỡng số. Proxy tự động không thay thế đánh giá này; q15 từng khớp keyword nhưng thiếu điều kiện 5,0 nên không đạt.
-4. Dừng API trước khi đổi dữ liệu/model. Sao lưu dữ liệu, chạy ingestion, `utc-doctor`, rồi `scripts/start-local.ps1`.
-5. Kiểm tra `/health`, `/ready`, một câu có nguồn và một câu ngoài phạm vi. Lưu kết quả, phiên bản model và hash nguồn.
+Keep `uv.lock` with the source and install with `uv sync --locked --python 3.12`.
+CI runs offline unit/contract tests on Windows and Ubuntu with Python 3.11/3.12,
+Ruff lint and format checks, wheel/sdist inventory checks, a dependency audit,
+actionlint and a redacted Git-history secret scan. CI does not run Ollama.
 
-## Logs và tài nguyên
-
-Một PID được quản lý cho cả dự án. Start trên port khác vẫn bị từ chối khi PID hiện tại còn sống; stop trước khi đổi port. Các lệnh start/stop dùng khóa file độc quyền; lệnh chạy trùng báo lỗi và không thay đổi PID. PID không thuộc API trong `.venv` bị từ chối dừng; kiểm tra process trước khi xử lý PID file. Foreground giữ khóa đến khi Ctrl+C; stop script dành cho background.
-
-Chạy nền ghi `data/runtime/server.stdout.log` và `server.stderr.log`. Log ứng dụng chỉ có request ID, mã HTTP, thời gian, loại lỗi; không ghi câu hỏi, nội dung PDF hoặc API key. Chế độ `--debug` và benchmark có nội dung, chỉ dùng cục bộ. Di chuyển/xóa log khi server đã dừng; runtime không tự xoay log.
-
-Theo dõi 503, 429, thời gian phản hồi và `/ready`. Nếu `/ready` lỗi, không tiếp tục gửi tải: chạy `utc-doctor`, kiểm tra Ollama, model và manifest. Timeout HTTP là timeout I/O, không phải hạn tổng thời gian của một luồng sinh token. Ollama giới hạn số token; chờ tác vụ hoàn tất trước khi bảo trì.
-
-SLO nội bộ ban đầu: 0 lỗi vận hành trong benchmark/smoke; p95 đo trên máy thực, lưu cùng báo cáo. Chưa có SLA nhiều người dùng. Khi benchmark tụt ngưỡng hoặc smoke sai, quay lại bản đã kiểm chứng; không phát hành thêm tính năng đến khi phục hồi.
-
-## Sao lưu và khôi phục
-
-Dừng API và mọi tiến trình ingestion trước khi copy. Sao lưu toàn bộ thư mục `data/chroma/v1_baseline` (SQLite, WAL nếu còn và tất cả segment), PDF nguồn, `uv.lock`, biến môi trường và mã nguồn tương ứng. Không chỉ copy `chroma.sqlite3` khi DB đang mở.
-
-Ví dụ PowerShell, backup vào thư mục mới, không ghi đè backup cũ:
+Run the real-model gate on the configured local machine, without serving other
+users or running another benchmark at the same time:
 
 ```powershell
-.\scripts\stop-local.ps1
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$backup = Join-Path $env:USERPROFILE "utc-backup-$stamp"
-New-Item -ItemType Directory -Path $backup
-Copy-Item -LiteralPath data/chroma/v1_baseline -Destination $backup -Recurse
-Copy-Item -LiteralPath data/raw/sotaysvk67.pdf,uv.lock -Destination $backup
+uv run --locked utc-doctor
+uv run --locked python -m pytest --run-integration -q
+# Commit the reviewed changes first; choose a new artifact name for every run.
+uv run --locked python scripts/run_qualification.py --output data/runtime/qualification-release-001.json
+uv build
+uv run --locked python scripts/check_distribution.py dist
 ```
 
-Restore vào thư mục mới rồi đặt `RAG_CHROMA_DIR` tới bản phục hồi, chọn đúng embedding model, chạy `utc-doctor`, khởi động và smoke. Không xóa DB đang chạy. Kiểm tra phục hồi định kỳ trên bản copy.
+The qualification harness requires clean tracked files and records commit, source,
+runtime/lock/benchmark hashes, dependency versions, index manifest, Ollama version,
+model digests and complete responses/context. It rechecks inputs at the end and
+never overwrites an existing result. Untracked files are not qualification inputs;
+only the reviewed runtime, benchmark, source and harness should participate.
 
-## Tái tạo và rollback chỉ mục
+Automatic minimums remain Hit@3 >= 90%, keyword match >= 80%, citation-page match
+>= 90%, all three out-of-scope refusals, and zero operational errors. The harness
+records results; its exit code checks input stability and operational errors, so
+review these proxy thresholds separately. `python -m student_handbook_rag.evaluate
+--check-proxies --output data/runtime/evaluation-release-001.json` provides the automatic
+threshold check when a separate evaluation run is wanted. Never reduce thresholds
+to obtain a pass.
 
-`utc-ingest --force` tạo collection mới, thêm toàn bộ chunks bằng ID xác định, xác nhận count, fsync manifest tạm rồi `os.replace` manifest hiện hành. Lock file đảm bảo một writer. Nếu nạp lỗi, manifest cũ còn nguyên. Crash trước publish có thể để lại collection chưa tham chiếu; không ảnh hưởng reader. Các generation cũ được giữ để rollback, vì vậy dung lượng tăng mỗi lần rebuild.
+Read every answerable response against the PDF, recording the artifact SHA-256 and
+per-question verdict. Check mandatory conditions, subjects, exceptions, negation
+and numeric thresholds. Repeat the q15 scholarship regression. Independent review
+and blind questions remain necessary for claims beyond the local development scope.
 
-Trước rebuild, copy `utc_handbook.manifest.json` sang file backup có timestamp. Để rollback: dừng API/ingest, phục hồi manifest đã sao lưu trỏ tới collection cũ còn tồn tại, bảo đảm cùng embedding model, chạy doctor rồi start. Để rollback cả runtime, dùng bản mã nguồn + lockfile đã kiểm chứng và cài lại `uv sync --locked`.
+Start the API and verify `/health`, `/ready`, an answer with citations and an
+out-of-scope refusal over HTTP. If using a separate frontend, test OPTIONS with
+Authorization/Content-Type, a real bearer-authenticated call, and a rejected Origin.
+Record responses, timings and the exact source/runtime/model hashes under ignored
+`data/runtime/`. A failed smoke or degraded benchmark blocks release; keep the PR
+Draft for owner review.
 
-Reader đã mở giữ generation cũ đến khi restart. `/ready` sẽ trả 503 nếu manifest đã đổi. Không chạy ingestion song song với phục vụ thông thường. Chưa có tự động xóa generation: chỉ dọn bằng công cụ quản trị khi đã backup và xác định collection không còn được dùng.
+## Evidence retention and cleanup inventory
 
-## Nguồn triển khai
+The 2026-10-14 hardening snapshot is local at
+`data/runtime/hardening-20261014/`. Its `baseline/` contains the original `049c19f`
+source ZIP, file hashes, API schema, offline test result and model/index inventory.
+`archive/removed/` preserves the removed files; `archive/inventory.json` records
+their SHA-256 values, and `archive/raw/` retains original audit artifacts and
+runtime snapshots. Back up this directory outside the checkout before discarding
+the working directory; it is not included in Git or distributions.
 
-- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/): khởi tạo engine khi service start.
-- [Chroma Python client](https://docs.trychroma.com/reference/python/client): persistent collections, không bật HTTP server.
-- [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs): ràng buộc JSON; ứng dụng vẫn kiểm tra ID và schema.
+The source ZIP retains the original committed tree with Git checkout line-ending
+attributes. The 33 initially archived files retain their exact working-tree bytes;
+later test moves and wrapper removals are recoverable from the source ZIP and Git.
+
+| Disposition | Files / reason |
+| --- | --- |
+| Keep | K67 PDF, gold benchmark, baseline retrieval/generation, local launch/qualification scripts |
+| Archive and remove | `docs/qualification/` tracked bundle, `docs/research/`, old evaluation output; historical observations are not evidence for a new runtime |
+| Archive and remove | ARAGOG/CRAG/memory, their tests/dependencies, unused prompt files and paper downloader; no baseline callers |
+| Remove from release input | Unverified `data/raw/handbook.txt`; replace loader-test usage with synthetic temporary fixtures |
+| Replace | Historical evidence CI coupling with current offline checks and a standalone strict distribution verifier |
+| Preserve separately | Pre-existing untracked source-intake design/schema files, outside this release change |
+
+The historical verifier passed before cleanup. Its immutable snapshot at commit
+`049c19fefd91466f4aa040e38e3d0347b771e5f5` still verifies the historical bundle in a
+checkout of that commit with full Git history. It must not be used to certify the
+new runtime. Historical metrics and failures were not rewritten, and removing the
+files from HEAD does not erase previously published Git history. No old report is
+silently relabeled as current qualification.
+
+## Processes, logs and recovery
+
+Windows scripts manage one API process per project. A second start on another port
+is refused while that process exists. Start/stop share a file lock, and stop checks
+the process identity before terminating it. Foreground uses Ctrl+C; background
+uses `stop-local.ps1`.
+
+Background logs are `data/runtime/server.stdout.log` and `server.stderr.log`.
+Application logs contain request ID, status, duration and error type, not questions,
+PDF content or bearer tokens. Debug CLI output and benchmark artifacts do contain
+source text and must remain local. Stop the server before rotating logs; automatic
+rotation is not implemented.
+
+Monitor 429, 503, latency and `/ready`. After a readiness failure run `utc-doctor`
+and check Ollama, models, source hash and manifest before sending more work.
+Timeout is per I/O operation, not a total inference deadline. Let inference finish
+before maintenance. Store p95 measurements with the machine and workload; there is
+no multi-user latency SLA.
+
+## Backup, rebuild and rollback
+
+Stop API and ingestion before copying the complete index directory, including
+SQLite/WAL files and vector segments, the source PDF, `uv.lock`, environment
+configuration and corresponding source revision. Use a new backup directory.
+Do not copy only `chroma.sqlite3` from a running service.
+
+`utc-ingest --force` builds a new immutable collection and atomically replaces the
+active manifest only after all batches succeed. Failed builds preserve the old
+generation. Save the old manifest before rebuild and restart the API afterwards.
+
+To restore, use a separate directory and point `RAG_CHROMA_DIR` at the restored
+copy. For generation rollback, stop all readers/writers and restore a saved manifest
+whose collection still exists, with matching source bytes and embedding model.
+Run doctor, start and smoke before use. Runtime rollback also requires the matching
+source revision and lockfile. Test restoration on a copy periodically. Old and
+crash-orphaned collections are not automatically pruned.
