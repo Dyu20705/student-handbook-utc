@@ -4,3 +4,7 @@
 *.yml text eol=lf
 *.toml text eol=lf
 *.md text eol=lf
+# Preserve exact evidence bytes so SHA-256 remains valid across checkouts.
+docs/qualification/benchmark-*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/qualification/http-smoke-*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/qualification/*.xml -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

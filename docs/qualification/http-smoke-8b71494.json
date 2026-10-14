@@ -1,0 +1,86 @@
+{
+  "started_at": "2026-10-14T01:22:53.636279+00:00",
+  "completed_at": "2026-10-14T01:24:26.598356+00:00",
+  "commit": "8b7149441362540085793001f2f1ea5b2fdb2cbc",
+  "benchmark_sha256": "fcad3aa99e17021b99e2869e20ff54e6a8e054c723e35e717978bf0437d49b56",
+  "checks": {
+    "duplicate_port_rejected_without_pid_overwrite": true,
+    "stop_removes_managed_listener": true,
+    "restart_ready": true,
+    "/health": 200,
+    "/ready": 200,
+    "/docs": 200,
+    "/openapi.json": 200,
+    "invalid_input_422_foreign_origin_403_body_limit_413": true,
+    "answer_with_cross_page_sources_and_refusal": true,
+    "runtime_and_models_unchanged_since_benchmark": true
+  },
+  "responses": [
+    {
+      "id": "q15",
+      "seconds": 51.22,
+      "response": {
+        "query": "Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?",
+        "answer": "Để được xét cấp học bổng khuyến khích học tập, sinh viên hệ chính quy phải đáp ứng các điều kiện sau:\n\nVề kết quả học tập:\n- Có điểm trung bình chung học tập đạt loại Khá trở lên (đối với mức học bổng loại Khá).\n- Có điểm trung bình chung học tập đạt loại Giỏi trở lên (đối với mức học bổng loại Giỏi).\n- Có điểm trung bình chung học tập đạt loại Xuất sắc (đối với mức học bổng loại Xuất sắc).\n\nVề kết quả rèn luyện:\n- Điểm rèn luyện đạt loại Khá trở lên (đối với mức học bổng loại Khá).\n- Điểm rèn luyện đạt loại Tốt trở lên (đối với mức học bổng loại Giỏi).\n- Điểm rèn luyện đạt loại Xuất sắc (đối với mức học bổng loại Xuất sắc).\n\nVề kỷ luật:\n- Không bị kỷ luật từ mức Khiển trách trở lên trong học kỳ xét học bổng.\n\nNgoài ra, sinh viên còn phải đáp ứng các điều kiện khác như:\n- Số tín chỉ đăng ký học lần thứ nhất (không tính tín chỉ học ngoại ngữ tăng cường) từ 15 tín chỉ trở lên.\n- Điểm trung bình chung học kỳ theo thang điểm 4 và điểm rèn luyện đạt loại khá trở lên.\n- Kết quả các học phần giáo dục thể chất, giáo dục quốc phòng và các học phần tính điểm lần thứ nhất đạt từ 5,0 trở lên (theo thang điểm 10).\n- Không bị kỷ luật từ Khiển trách trở lên.",
+        "sources": [
+          {
+            "document": "sotaysvk67.pdf",
+            "source": "C:\\Users\\Admin\\student-handbook-utc\\data\\raw\\sotaysvk67.pdf",
+            "page": 45,
+            "book_page": 43,
+            "section": "4. Khi hết thời hạn đình chỉ đối với hình thức kỷ luật đình chỉ học tập có",
+            "chunk_id": "sotaysvk67.pdf_p45_c0181",
+            "score": 1.0,
+            "excerpt": "PHẦN 2.5. QUY ĐỊNH VỀ HỌC BỔNG \nCăn cứ Nghị định số 66/2026/NĐ-CP ngày 22/03/2026 về việc quy định \nchi tiết một số điều của Luật Giáo dục \n1. Học bổng khuyến khích học tập \na. Đối tượng được xét, cấp học bổng khuyến khích học tập là sinh viên \nhệ chính quy có kết quả học tập, rèn luyện từ loại Khá trở lên, không bị kỷ \nluật từ mức Khiển trách trở lên trong học kỳ xét học bổng thì được xét cấp học \nbổng KKHT trong phạm vi quỹ học bổng KKHT của trường theo các mức. \nKết quả học học tập từ loại Khá trở trở lên chỉ là điều kiện để được xếp vào \ndiện xét cấp học bổng KKHT."
+          },
+          {
+            "document": "sotaysvk67.pdf",
+            "source": "C:\\Users\\Admin\\student-handbook-utc\\data\\raw\\sotaysvk67.pdf",
+            "page": 45,
+            "book_page": 43,
+            "section": "4. Khi hết thời hạn đình chỉ đối với hình thức kỷ luật đình chỉ học tập có",
+            "chunk_id": "sotaysvk67.pdf_p45_c0183",
+            "score": 2.0,
+            "excerpt": "và do Hiệu trưởng quy định. \n+ Mức học bổng loại Xuất sắc: Có điểm trung bình chung học tập đạt loại \nXuất sắc và điểm rèn luyện đạt loại Xuất sắc. Mức học bổng cao hơn loại Giỏi \nvà do Hiệu trưởng quy định. \n- Điều kiện để sinh viên được xét cấp học bổng: \n+ Số tín chỉ đăng ký học lần thứ nhất (không tính tín chỉ học ngoại ngữ \ntăng cường) từ 15 tín chỉ trở lên. \n+ Điểm trung bình chung học kỳ theo thang điểm 4 và điểm rèn luyện đạt \nloại khá trở lên."
+          },
+          {
+            "document": "sotaysvk67.pdf",
+            "source": "C:\\Users\\Admin\\student-handbook-utc\\data\\raw\\sotaysvk67.pdf",
+            "page": 46,
+            "book_page": 44,
+            "section": "2. Học bổng chính sách",
+            "chunk_id": "sotaysvk67.pdf_p46_c0184",
+            "score": 3.0,
+            "excerpt": "+ Kết quả các học phần giáo dục thể chất, giáo dục quốc phòng và các \nhọc phần tính điểm lần thứ nhất đạt từ 5,0 trở lên (theo thang điểm 10). \n+ Không bị kỷ luật từ Khiển trách trở lên. \n- Điểm Trung bình chung học kỳ được tính theo quy định hiện hành của \nQuy chế đào tạo đại học và cao đẳng hệ chính quy do Bộ giáo dục và Đào tạo \nban hành. Kết quả rèn luyện được xác định theo quy định của Quy chế đánh \ngiá kết quả rèn luyện hiện hành do Bộ giáo dục và Đào tạo ban hành. \n- Sinh viên thuộc diện hưởng học bổng chính sách, trợ cấp xã hội, trợ cấp"
+          },
+          {
+            "document": "sotaysvk67.pdf",
+            "source": "C:\\Users\\Admin\\student-handbook-utc\\data\\raw\\sotaysvk67.pdf",
+            "page": 45,
+            "book_page": 43,
+            "section": "4. Khi hết thời hạn đình chỉ đối với hình thức kỷ luật đình chỉ học tập có",
+            "chunk_id": "sotaysvk67.pdf_p45_c0182",
+            "score": 5.0,
+            "excerpt": "diện xét cấp học bổng KKHT. \nb. Tiêu chuẩn và mức xét, cấp học bổng khuyến khích học tập: \n- Các mức học bổng: \n+ Mức học bổng loại Khá: Có điểm trung bình chung học tập đạt loại Khá \ntrở lên và điểm rèn luyện đạt loại Khá trở lên. Mức học bổng tối thiểu bằng \nhoặc cao hơn mức trần học phí hiện hành ngành nghề mà sinh viên theo học \ndo Hiệu trưởng quy định. \n+ Mức học bổng loại Giỏi: Có điểm trung bình trung học tập đạt loại Giỏi \ntrở lên và điểm rèn luyện đạt loại Tốt trở lên. Mức học bổng cao hơn loại khá \nvà do Hiệu trưởng quy định."
+          }
+        ],
+        "is_insufficient_context": false,
+        "status": "answered"
+      }
+    },
+    {
+      "id": "q24",
+      "seconds": 5.0,
+      "response": {
+        "query": "Danh sách các món ăn phục vụ trong bữa trưa hôm nay tại căn tin nhà ăn sinh viên UTC gồm những món gì?",
+        "answer": "Tôi không tìm thấy đủ thông tin trong Sổ tay sinh viên để trả lời câu hỏi này.",
+        "sources": [],
+        "is_insufficient_context": true,
+        "status": "refused"
+      }
+    }
+  ],
+  "managed_pid": "7208",
+  "api_url": "http://127.0.0.1:8000",
+  "left_running": true
+}
