@@ -41,5 +41,8 @@ def test_scholarship_keeps_cross_page_thresholds():
     assert "5,0" in answer or "5.0" in answer
     assert "15" in answer and "ngoại ngữ tăng cường" in answer
     assert "lần thứ nhất" in answer or "lần đầu" in answer
+    assert "giáo dục thể chất" in answer and "giáo dục quốc phòng" in answer
     assert "khá" in answer and "khiển trách" in answer
     assert {45, 46} <= {source["page"] for source in result["sources"]}
+    assert {"sotaysvk67.pdf_p45_c0183", "sotaysvk67.pdf_p46_c0184"} <= {
+        source["chunk_id"] for source in result["sources"]}

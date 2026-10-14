@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from langchain_core.documents import Document
 
-from student_handbook_rag.chain import StudentHandbookRAG
+from student_handbook_rag.chain import StudentHandbookRAG, build_context_text
 from student_handbook_rag.retriever import BaselineRetriever
 
 
@@ -32,7 +32,17 @@ def test_cross_page_condition_is_available_and_cited_with_its_own_page():
     assert result["status"] == "answered"
     assert [s["page"] for s in result["sources"]] == [45, 46]
     assert "5,0" in engine.chain.invoke.call_args.args[0]["context"]
+    assert "TIẾP NỐI DANH SÁCH từ ID: handbook.pdf-1." in engine.chain.invoke.call_args.args[0]["context"]
     assert len(search.retrieve.return_value) == 1  # Original rankings are unmodified.
+
+
+def test_context_does_not_label_unrelated_bullets_as_continuations():
+    first = doc(1, 45, "+ First condition")
+    for unrelated in (doc(3, 46, "+ Gap"), doc(2, 47, "+ Other page"),
+                      doc(2, 46, "+ Different source", "other.pdf"),
+                      doc(2, 46, "New section")):
+        context = build_context_text([(first, 1.), (unrelated, 2.)])
+        assert "TIẾP NỐI DANH SÁCH" not in context
 
 
 def test_no_duplicate_or_cross_document_or_non_adjacent_expansion():
