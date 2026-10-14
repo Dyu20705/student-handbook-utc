@@ -2,6 +2,8 @@
 
 ## PR #1 evidence publishing — 2026-10-14
 
+- Restrict wheel/sdist members to reviewed file allowlists with explicit metadata exceptions; reject unlisted snapshots even inside package/test/metadata directories, links and duplicate members.
+- Reproduce the previous packaging gap with six failing regressions before the fix; preserve full-history evidence verification and its existing provenance gates.
 - Replace public raw artifacts with minimized summaries, preserve exact audit inputs locally, and distinguish public/raw SHA-256 values.
 - Exclude qualification evidence from wheel/sdist; retain historical failures and disclose that previously published Git history remains accessible.
 - Add a stdlib-only offline verifier for artifact schemas/hashes, recomputed proxies, Git/runtime provenance, JUnit outcomes and report references, including distribution checks in CI.

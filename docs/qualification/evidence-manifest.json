@@ -120,9 +120,9 @@
     }
   },
   "report_sha256_lf": {
-    "local-production-readiness.md": "0cfa5c9b43c94b712e65eb3b0b6c7768bc1955195c9323775cf8e1f8e862047e",
+    "local-production-readiness.md": "27e31d0e457051ea250774b4f5949f821bcad685deb5d9bff7acb765d79d3f32",
     "semantic-review.md": "f868dc7900068b350f9dd498b20702bb5e31cdbdcd04bc6c05726583f82ebc5d",
     "semantic-rubric.md": "27e04588b19f3891132291ef904854ebe5c23fc4a4f4a61bf33562b7448db86f",
-    "evidence-policy.md": "a981ac29bfba992912f769b1cb6bfd2b4a39c0df81bf4abd7c96cfbfa8b94eb1"
+    "evidence-policy.md": "95caf5f0867c769153eac52af49967cd9ce9a7b43fc2c9668f128781b9d7353b"
   }
 }

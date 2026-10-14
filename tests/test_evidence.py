@@ -4,6 +4,7 @@ import io
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import tarfile
 import xml.etree.ElementTree as ET
@@ -20,11 +21,13 @@ spec.loader.exec_module(evidence)
 
 @pytest.fixture
 def bundle(tmp_path):
-    directory = tmp_path / "qualification"
-    directory.mkdir()
+    directory = tmp_path / "docs/qualification"
+    directory.mkdir(parents=True)
     for name in (*evidence.NAMES, *evidence.REPORTS, "evidence-manifest.json", "evidence-summary.md"):
         shutil.copyfile(ROOT / evidence.DIRECTORY / name, directory / name)
-    shutil.copyfile(ROOT / "docs/security.md", tmp_path / "security.md")
+    shutil.copyfile(ROOT / "docs/security.md", tmp_path / "docs/security.md")
+    (tmp_path / "scripts").mkdir()
+    shutil.copyfile(ROOT / "scripts/evidence.py", tmp_path / "scripts/evidence.py")
     return directory
 
 
@@ -209,10 +212,74 @@ def test_private_raw_corruption_is_detected(tmp_path):
 @pytest.mark.parametrize("leaked", ["docs/qualification/benchmark.json", "data/runtime/audit.json", ".env"])
 @pytest.mark.parametrize("archive_kind", ["wheel", "sdist"])
 def test_archives_reject_evidence_and_private_data(tmp_path, leaked, archive_kind):
-    with zipfile.ZipFile(tmp_path / "package.whl", "w") as wheel:
-        wheel.writestr(leaked if archive_kind == "wheel" else "pkg/__init__.py", b"")
-    with tarfile.open(tmp_path / "package.tar.gz", "w:gz") as sdist:
-        member = tarfile.TarInfo("package/" + (leaked if archive_kind == "sdist" else "src/pkg/__init__.py"))
-        sdist.addfile(member, io.BytesIO(b""))
-    with pytest.raises(ValueError, match="Evidence/private data in distribution"):
+    write_archive_pair(tmp_path, leaked, archive_kind)
+    with pytest.raises(ValueError, match="Unapproved distribution member"):
+        evidence.verify_archives(tmp_path)
+
+
+def write_archive_pair(directory, extra=None, archive_kind=None):
+    """Minimal archive fixtures with real package paths and metadata exceptions."""
+    stem = "student_handbook_rag-0.2.0"
+    wheel_files = ["student_handbook_rag/__init__.py", f"{stem}.dist-info/METADATA",
+                   f"{stem}.dist-info/WHEEL", f"{stem}.dist-info/RECORD"]
+    sdist_files = ["src/student_handbook_rag/__init__.py", "PKG-INFO", "setup.cfg",
+                   "src/student_handbook_rag.egg-info/SOURCES.txt"]
+    if extra is not None:
+        (wheel_files if archive_kind == "wheel" else sdist_files).append(extra)
+    with zipfile.ZipFile(directory / f"{stem}-py3-none-any.whl", "w") as wheel:
+        for name in wheel_files:
+            wheel.writestr(name, b"")
+    with tarfile.open(directory / f"{stem}.tar.gz", "w:gz") as sdist:
+        for name in sdist_files:
+            sdist.addfile(tarfile.TarInfo(f"{stem}/{name}"), io.BytesIO(b""))
+
+
+@pytest.mark.parametrize("archive_kind,unlisted", [
+    ("wheel", "student_handbook_rag/private_snapshot.json"),
+    ("sdist", "src/student_handbook_rag/private_snapshot.json"),
+    ("wheel", "student_handbook_rag/private_snapshot.py"),
+    ("sdist", "tests/private_snapshot.py"),
+    ("wheel", "student_handbook_rag-0.2.0.dist-info/private_snapshot.json"),
+    ("sdist", "src/student_handbook_rag.egg-info/private_snapshot.json"),
+])
+def test_archives_reject_unlisted_files_outside_old_blacklist(tmp_path, archive_kind, unlisted):
+    write_archive_pair(tmp_path, unlisted, archive_kind)
+    with pytest.raises(ValueError, match="Unapproved distribution member"):
+        evidence.verify_archives(tmp_path)
+
+
+def test_archives_accept_known_files_and_metadata(tmp_path):
+    write_archive_pair(tmp_path)
+    evidence.verify_archives(tmp_path)
+
+
+@pytest.mark.parametrize("archive_kind", ["wheel", "sdist"])
+def test_archives_reject_links_at_allowed_paths(tmp_path, archive_kind):
+    write_archive_pair(tmp_path)
+    if archive_kind == "wheel":
+        path = next(tmp_path.glob("*.whl"))
+        with zipfile.ZipFile(path, "w") as archive:
+            member = zipfile.ZipInfo("student_handbook_rag/__init__.py")
+            member.create_system = 3
+            member.external_attr = (stat.S_IFLNK | 0o777) << 16
+            archive.writestr(member, "../../private_snapshot.json")
+    else:
+        path = next(tmp_path.glob("*.tar.gz"))
+        with tarfile.open(path, "w:gz") as archive:
+            member = tarfile.TarInfo("student_handbook_rag-0.2.0/src/student_handbook_rag/__init__.py")
+            member.type = tarfile.SYMTYPE
+            member.linkname = "../../private_snapshot.json"
+            archive.addfile(member)
+    with pytest.raises(ValueError, match="Unsupported distribution member type"):
+        evidence.verify_archives(tmp_path)
+
+
+@pytest.mark.parametrize("archive_kind", ["wheel", "sdist"])
+def test_archives_reject_duplicate_allowed_members(tmp_path, archive_kind):
+    if archive_kind == "wheel":
+        with pytest.warns(UserWarning, match="Duplicate name"):
+            write_archive_pair(tmp_path, "student_handbook_rag/__init__.py", archive_kind)
+    else:
+        write_archive_pair(tmp_path, "src/student_handbook_rag/__init__.py", archive_kind)
+    with pytest.raises(ValueError, match="Duplicate distribution member"):
         evidence.verify_archives(tmp_path)

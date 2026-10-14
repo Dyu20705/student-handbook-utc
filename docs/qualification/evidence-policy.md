@@ -30,6 +30,28 @@ lại metric từ response gốc; không xuất raw ra log, workspace hay artifa
 tự động dùng cách công bố raw vào Git này cho lần qualification mới. Nếu cần xóa
 khỏi lịch sử hoặc phân phối lại tài liệu, đó là quyết định riêng của chủ repo.
 
+## Phạm vi kiểm tra distribution
+
+Gate dùng danh sách **tên file cụ thể** trong [verifier](../../scripts/evidence.py):
+`WHEEL_FILES` cho module/prompt đã duyệt; `SDIST_FILES` thêm các file build,
+README/changelog, hai tài liệu vận hành, script và test đã duyệt. File mới phải
+được thêm vào allowlist qua code review, không tự nhận từ glob, archive hoặc
+`SOURCES.txt`. Do đó `private_snapshot.json` hoặc `.py` trong thư mục package/test
+vẫn bị từ chối dù đường dẫn không chứa từ khóa riêng tư.
+
+Ngoại lệ metadata cũng giới hạn theo tên: wheel cho phép `METADATA`, `WHEEL`,
+`RECORD`, `entry_points.txt`, `top_level.txt` trong thư mục dist-info đúng version;
+sdist cho phép `PKG-INFO`, `setup.cfg` và sáu file egg-info được liệt kê trong
+`SDIST_METADATA`. Không cho phép tùy ý thêm file vào thư mục metadata. Chỉ chấp
+nhận file thường và thư mục cha cần thiết; từ chối link, member trùng tên hoặc
+đường dẫn khác allowlist, không giải nén archive khi kiểm tra.
+
+Gate này kiểm soát file nào được đóng gói, **không quét bí mật trong nội dung các
+file đã được phép**, kể cả metadata do build sinh. Review source/metadata vẫn
+cần thiết; không dùng CI xanh làm tuyên bố rằng mọi dữ liệu riêng tư đều được
+phát hiện. Full-history verification ở cả bốn matrix jobs được giữ nguyên để
+đối chiếu audit/provenance, chấp nhận chi phí checkout tăng theo lịch sử repo.
+
 ## SHA và provenance
 
 [Manifest](evidence-manifest.json) ghi SHA-256 byte của từng file công khai và

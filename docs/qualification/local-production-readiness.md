@@ -47,6 +47,8 @@ ghi riêng trong [manifest](evidence-manifest.json).
 | --- | --- | --- |
 | P2: metadata local, excerpt trong evidence và sdist | Sửa | Xuất bản allowlist tối thiểu, giữ raw trong thư mục Git bỏ qua; loại qualification khỏi distribution |
 | P2: CI chưa kiểm chứng evidence | Sửa | Verifier offline kiểm tra schema/SHA/metric/provenance/runtime/report; kiểm tra archive trong bốn matrix jobs |
+| P2/P3: packaging chỉ chặn đường dẫn quen thuộc | Sửa | Allowlist từng file với metadata ngoại lệ rõ ràng; regression tái hiện file lạ trong package/test/metadata lọt qua gate cũ và bị gate mới từ chối |
+| P3: full history ở bốn matrix jobs | Giữ trade-off | Giữ nguyên để xác minh audit/provenance trên từng OS/Python; chấp nhận chi phí checkout |
 | P2: verdict chưa độc lập | Follow-up có giới hạn | Ghi rõ cùng Codex, `independent=false`; gate blind + đánh giá độc lập + lặp q15 trước tuyên bố rộng hơn |
 | P3: JSON lớn, khó review | Sửa | Bỏ text/context/dependency dump; summary tự sinh, tách hash raw/public |
 

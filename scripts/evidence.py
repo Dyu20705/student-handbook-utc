@@ -11,9 +11,11 @@ import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
+import stat
 import subprocess
 import sys
 import tarfile
+import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -41,6 +43,35 @@ NAMES = tuple(f"benchmark-{short}.json" for short in RUNS) + tuple(XML_RUNS) + (
 SETTINGS = ("LLM_MODEL", "EMBEDDING_MODEL", "OLLAMA_TIMEOUT", "CHUNK_SIZE", "CHUNK_OVERLAP",
             "RETRIEVAL_K", "TEMPERATURE", "MAX_OUTPUT_TOKENS", "num_ctx", "reasoning")
 DEPENDENCIES = ("chromadb", "httpx", "langchain-chroma", "langchain-core", "langchain-ollama")
+
+# Adding a distributable file requires an explicit review of this inventory.
+# Do not derive it from archive members, local globs or generated SOURCES.txt.
+WHEEL_FILES = {
+    f"student_handbook_rag/{name}" for name in (
+        "__init__.py", "api.py", "aragog.py", "ask.py", "chain.py", "config.py",
+        "corrective.py", "doctor.py", "evaluate.py", "ingest.py", "lexical.py",
+        "loader.py", "memory.py", "retriever.py", "vectorstore.py",
+        "prompts/reduce_stupidity.txt", "prompts/respond.txt", "prompts/workflow.txt",
+    )
+}
+SDIST_FILES = {f"src/{name}" for name in WHEEL_FILES} | {
+    "README.md", "CHANGELOG.md", "MANIFEST.in", "pyproject.toml", "uv.lock",
+    "docs/operations.md", "docs/security.md",
+    "scripts/evidence.py", "scripts/run_qualification.py", "scripts/local-server-state.ps1",
+    "scripts/setup-local.ps1", "scripts/start-local.ps1", "scripts/stop-local.ps1",
+    "tests/conftest.py", "tests/integration/test_baseline_rag.py",
+    "tests/test_aragog.py", "tests/test_chain.py", "tests/test_corrective.py", "tests/test_evidence.py",
+    "tests/test_loader.py", "tests/test_memory.py", "tests/test_rerank.py", "tests/test_vectorstore.py",
+    "tests/unit/test_api.py", "tests/unit/test_evaluation_proxies.py", "tests/unit/test_failure_modes_unit.py",
+    "tests/unit/test_lexical.py", "tests/unit/test_local_config.py", "tests/unit/test_page_continuation.py",
+    "tests/unit/test_production.py", "tests/unit/test_retriever_unit.py", "tests/unit/test_windows_lifecycle.py",
+}
+WHEEL_METADATA = {"METADATA", "WHEEL", "RECORD", "entry_points.txt", "top_level.txt"}
+SDIST_METADATA = {"PKG-INFO", "setup.cfg"} | {
+    f"src/student_handbook_rag.egg-info/{name}" for name in (
+        "PKG-INFO", "SOURCES.txt", "dependency_links.txt", "entry_points.txt", "requires.txt", "top_level.txt",
+    )
+}
 
 
 def require(condition, message):
@@ -332,21 +363,41 @@ def report_hashes(directory):
     return {name: sha(lf((directory / name).read_bytes())) for name in REPORTS}
 
 
+def check_archive_members(members, allowed, archive_name):
+    directories = {str(parent) for name in allowed for parent in PurePosixPath(name).parents
+                   if str(parent) != "."}
+    seen = set()
+    for name, is_directory, is_regular in members:
+        require(is_directory or is_regular, f"Unsupported distribution member type: {archive_name}/{name}")
+        canonical = name.removesuffix("/") if is_directory else name
+        require(canonical in (directories if is_directory else allowed),
+                f"Unapproved distribution member: {archive_name}/{name}")
+        require(canonical not in seen, f"Duplicate distribution member: {archive_name}/{name}")
+        seen.add(canonical)
+
+
 def verify_archives(directory):
+    """Reject unapproved files/types; this is not a secret scan of approved text."""
+    project = tomllib.loads((Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8"))
+    stem = f"student_handbook_rag-{project['project']['version']}"
+    wheel_allowed = WHEEL_FILES | {f"{stem}.dist-info/{name}" for name in WHEEL_METADATA}
+    sdist_allowed = {f"{stem}/{name}" for name in SDIST_FILES | SDIST_METADATA}
     archives = sorted(directory.glob("*.whl")) + sorted(directory.glob("*.tar.gz"))
     require(any(p.suffix == ".whl" for p in archives) and any(p.name.endswith(".tar.gz") for p in archives),
             "Expected both wheel and sdist")
     for path in archives:
         if path.suffix == ".whl":
             with zipfile.ZipFile(path) as archive:
-                names = archive.namelist()
+                members = []
+                for member in archive.infolist():
+                    mode = stat.S_IFMT(member.external_attr >> 16)
+                    is_directory = member.is_dir() and mode in (0, stat.S_IFDIR)
+                    is_regular = not member.is_dir() and mode in (0, stat.S_IFREG)
+                    members.append((member.filename, is_directory, is_regular))
+                check_archive_members(members, wheel_allowed, path.name)
         else:
             with tarfile.open(path) as archive:
-                names = archive.getnames()
-        for name in names:
-            parts = PurePosixPath(name).parts
-            require(not any(part in {"qualification", "data", ".venv", ".uv-cache", ".env", ".git"}
-                            for part in parts), f"Evidence/private data in distribution: {path.name}/{name}")
+                check_archive_members(((m.name, m.isdir(), m.isfile()) for m in archive), sdist_allowed, path.name)
 
 
 def verify(repo, directory=None, raw_directory=None, dist=None):
