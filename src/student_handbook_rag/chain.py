@@ -132,8 +132,10 @@ class StudentHandbookRAG:
                     "trang sau. Các nhóm được nhắc trong câu hỏi không giới hạn danh sách "
                     "điều kiện cần trả lời. Không thay danh sách điều kiện bằng đoạn mô tả "
                     "đối tượng hoặc phân loại mức hưởng. Giữ mọi ngưỡng số, phạm vi áp dụng, "
-                    "ngoại lệ và từ phủ định. Với câu hỏi khác, trả lời trực tiếp đúng nội dung "
-                    "được hỏi. Chỉ trả JSON theo schema.",
+                    "ngoại lệ và từ phủ định. Nếu hỏi vị trí, nêu địa điểm cụ thể trong nguồn "
+                    "(tầng, tòa nhà hoặc địa chỉ nếu có), không chỉ mô tả chức năng hay dịch vụ. "
+                    "Với câu hỏi khác, trả lời trực tiếp đúng nội dung được hỏi. "
+                    "Chỉ trả JSON theo schema.",
                 ),
             ]
         )

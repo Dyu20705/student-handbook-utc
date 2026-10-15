@@ -81,6 +81,12 @@ HTTP response, diagnosis and semantic review remain under the local snapshot.
 The owner authorized a bounded generation-instruction follow-up; it requires its
 own committed qualification. A later pass must not replace or hide those failures.
 
+The follow-up at `49c5d91` preserved the q15 conditions but failed source comparison
+for q13: the answer described the bookshop without its floor and building. This
+benchmark and semantic failure are also retained. A further instruction clarifies
+location answers, with bookshop and document-search regressions; it likewise needs
+qualification of its committed runtime.
+
 ## Processes, logs and recovery
 
 Windows scripts manage one API process per project. A second start on another port

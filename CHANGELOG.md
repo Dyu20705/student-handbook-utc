@@ -1,5 +1,10 @@
 # Changelog
 
+## Location-answer regression — 2026-10-15
+
+- Preserve the `49c5d91` qualification: scholarship conditions are complete, but q13 omits the requested bookshop location despite passing automatic proxies.
+- Clarify the final instruction for location questions and add live regressions for the bookshop and document-search service. Keep retrieval, model settings and benchmark data unchanged.
+
 ## API schema follow-up — 2026-10-15
 
 - Match the OpenAPI bearer requirement to the configured authentication mode and test both enabled and disabled modes.

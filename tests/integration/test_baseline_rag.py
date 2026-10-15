@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from student_handbook_rag.chain import StudentHandbookRAG
@@ -34,6 +36,25 @@ def test_baseline_rag_unanswerable():
     assert (
         "không tìm thấy đủ thông tin" in res["answer"].lower() or "không" in res["answer"].lower()
     )
+
+
+@pytest.mark.parametrize(
+    ("question", "floors"),
+    [
+        ("Nhà sách cung cấp giáo trình, tài liệu tham khảo của Thư viện UTC nằm ở đâu?", [1]),
+        ("Dịch vụ tìm tin, tìm tài liệu theo yêu cầu của Thư viện UTC nằm ở đâu?", [6, 7]),
+    ],
+)
+def test_location_answer_includes_floor_and_building(question, floors):
+    """Location questions must answer where, rather than describe the service."""
+    result = StudentHandbookRAG().query(question)
+    answer = result["answer"].lower()
+    assert result["status"] == "answered"
+    assert re.search(r"\ba8\b", answer), answer
+    floor_groups = re.findall(r"\btầng\s+(\d+(?:\s*(?:,|và|&|[-–])\s*(?:tầng\s+)?\d+)*)", answer)
+    actual_floors = {int(n) for group in floor_groups for n in re.findall(r"\b\d+\b", group)}
+    assert set(floors) <= actual_floors, answer
+    assert 71 in {source["page"] for source in result["sources"]}
 
 
 @pytest.mark.parametrize(
