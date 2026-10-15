@@ -1,5 +1,9 @@
 # Changelog
 
+## API schema follow-up — 2026-10-15
+
+- Match the OpenAPI bearer requirement to the configured authentication mode and test both enabled and disabled modes.
+
 ## Answer completeness follow-up — 2026-10-14
 
 - Preserve the failed post-hardening benchmark and HTTP smoke locally: q15 omitted credit and subject-score requirements despite unchanged retrieval context and passing automatic proxies.

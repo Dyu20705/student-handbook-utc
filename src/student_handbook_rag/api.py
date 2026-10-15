@@ -11,12 +11,12 @@ import uuid
 from collections import deque
 from contextlib import asynccontextmanager
 from importlib.metadata import version
-from typing import Annotated, Literal
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, Security
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -235,12 +235,9 @@ def create_app(
         "/ask",
         response_model=Answer,
         responses={code: {"model": ErrorResponse} for code in (401, 403, 413, 429, 503)},
+        dependencies=[Security(bearer)] if api_key else [],
     )
-    def ask(
-        payload: Question,
-        request: Request,
-        _credentials: Annotated[HTTPAuthorizationCredentials | None, Security(bearer)],
-    ):
+    def ask(payload: Question, request: Request):
         now = time.monotonic()
         with rate_lock:
             while recent and recent[0] <= now - 60:

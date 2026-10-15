@@ -252,3 +252,23 @@ def test_openapi_describes_public_success_errors_and_bearer(browser):
     assert models["Answer"]["properties"]["status"]["enum"] == ["answered", "refused"]
     assert "retrieved_chunks" not in models["Answer"]["properties"]
     assert "retrieval_rank" in models["Citation"]["properties"]
+
+
+@pytest.mark.parametrize("api_key", ["", "contract-test-key"])
+def test_openapi_auth_matches_configured_enforcement(monkeypatch, api_key):
+    monkeypatch.setenv("RAG_API_KEY", api_key)
+    with TestClient(
+        create_app(lambda: MagicMock(), lambda: None, lambda _: None),
+        base_url="http://127.0.0.1",
+    ) as client:
+        operation = client.get("/openapi.json").json()["paths"]["/ask"]["post"]
+        assert operation.get("security", []) == ([{"HTTPBearer": []}] if api_key else [])
+        response = client.post("/ask", json={"question": ""})
+        assert response.status_code == (401 if api_key else 422)
+        if api_key:
+            response = client.post(
+                "/ask",
+                json={"question": ""},
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            assert response.status_code == 422

@@ -2,6 +2,7 @@
 
 Base URL: `http://127.0.0.1:8000`. `/openapi.json` is the generated typed schema;
 `/docs` is the interactive client. Running the service requires a valid existing index.
+The schema requires bearer authentication for `/ask` only when `RAG_API_KEY` is set.
 
 | Endpoint | Result |
 | --- | --- |
