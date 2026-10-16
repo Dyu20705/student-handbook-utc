@@ -43,6 +43,7 @@ The default suite needs no Ollama. Real-model checks are a separate local releas
 
 - [Architecture](docs/architecture.md) and [API contract](docs/api.md)
 - [Configuration](docs/configuration.md) and [operations](docs/operations.md)
+- [Qualified release handoff](docs/operations.md#qualified-release-handoff--2026-10-16)
 - [Security](docs/security.md), [limitations](docs/limitations.md) and [data provenance](data/README.md)
 
 Answers can omit or misinterpret conditions even with valid citations. Check the

@@ -1,5 +1,11 @@
 # Changelog
 
+## Local release closeout — 2026-10-16
+
+- Reject indexes whose chunk size or overlap differs from reader configuration. Readiness and inference fail closed until an explicit rebuild; ingestion overrides remain supported and print the matching serving settings.
+- Verify configuration drift, rebuild recovery and a restarted reader through regression tests. Preserve the qualified model, retrieval, source and benchmark.
+- Record the completed local qualification and operator handoff in the operations guide. Clarify that five ignored audit records represent four unique scoped Chroma advisory IDs.
+
 ## Location-answer regression — 2026-10-15
 
 - Preserve the `49c5d91` qualification: scholarship conditions are complete, but q13 omits the requested bookshop location despite passing automatic proxies.

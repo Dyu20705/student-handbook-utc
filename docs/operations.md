@@ -1,5 +1,58 @@
 # Local operations
 
+## Qualified release handoff — 2026-10-16
+
+The qualified runtime is commit
+`36dc88b17ada7aa722d1c34a5510c8d4c46b5a27`. Its scope is the K67 source PDF on
+one trusted local machine, one API worker and embedded Chroma. Final owner review
+is tracked in [PR #1](https://github.com/Dyu20705/student-handbook-utc/pull/1).
+Documentation-only descendants can retain this runtime qualification when the
+runtime, lockfile, model configuration, source, benchmark and launch/qualification
+scripts are unchanged; record that comparison and run CI for the new commit.
+
+| Recorded gate at the qualified runtime | Result |
+| --- | --- |
+| Offline Python 3.12 | 124 passed; 11 model-dependent cases skipped |
+| Clean committed source, separate Python 3.11 environment | 124 passed; 11 skipped |
+| Actual Ollama integration | 11 passed; zero skipped |
+| Actual HTTP smoke | 36 checks passed, including health/readiness, auth, CORS, resource limits, q13/q15 and refusal |
+| Full 25-question benchmark | Hit@3 95.45%; keyword 22/22; gold-page 21/22; refusal 3/3; operational errors 0 |
+| Separate agent comparison with source PDF | 22/22 supported answers; 3/3 appropriate refusals |
+| Runtime CI | 12 successful checks across [push](https://github.com/Dyu20705/student-handbook-utc/actions/runs/38870754873) and [pull request](https://github.com/Dyu20705/student-handbook-utc/actions/runs/38870759839) |
+| Packaging, lint, workflow and history text scan | Passed; 34 commits scanned with no unexcepted secret finding |
+
+Private evidence remains under `data/runtime/hardening-20261014/`:
+`qualification-36dc88b-retry.json`, `independent-semantic-review-36dc88b.json`,
+`integration-36dc88b.xml`, `http-smoke-36dc88b.json` and
+`final-release-gate-36dc88b.json`. The full benchmark artifact SHA-256 is
+`f947d3bd23d65304117912be5192afdeae19556d39eaac95e41be795b4d3cac1`.
+Input hashes remained stable, and all 25 ordered retrieved contexts matched the
+frozen baseline. The first interrupted attempt remains recorded as incomplete.
+Back up the private evidence before removing the checkout.
+
+The source comparison was performed by a separate agent on known questions using
+PDF text extraction. It is not a blind evaluation or human approval. q12 is
+supported by the eUTC instructions on PDF page 84 while its unchanged gold page
+is 4. q13 retains Floor 1 A8; q15 retains its cross-page conditions. Approximate
+section labels and general answer-completeness limits still apply.
+
+Before first operational use, run doctor, start the API, check `/health` and
+`/ready`, and verify one cited answer and one refusal. Set explicit frontend
+origins and bearer authentication when the local workflow needs them. Keep the
+API and Chroma within the [security scope](security.md).
+
+During use, inspect 429/503 responses, readiness, latency and the local process
+logs. Stop accepting new work on a readiness failure, source/configuration drift,
+or an incomplete material answer; investigate against the PDF and use the rollback
+procedure below if needed. Let active inference finish before maintenance.
+There is no unattended monitoring service or multi-user latency SLA.
+
+The four embedded-only Chroma exceptions and six exact secret-scan exceptions
+require review by **2026-11-13**, even if feature development stops. PDF retention
+follows the owner's recorded permission confirmation; independently verified
+rights-holder documentation is not claimed. Owner approval and merge remain
+separate from the recorded technical gates.
+
 ## Release checks
 
 Keep `uv.lock` with the source and install with `uv sync --locked --python 3.12`.
