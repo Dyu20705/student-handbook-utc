@@ -95,50 +95,21 @@ Start the API and verify `/health`, `/ready`, an answer with citations and an
 out-of-scope refusal over HTTP. If using a separate frontend, test OPTIONS with
 Authorization/Content-Type, a real bearer-authenticated call, and a rejected Origin.
 Record responses, timings and the exact source/runtime/model hashes under ignored
-`data/runtime/`. A failed smoke or degraded benchmark blocks release; keep the PR
-Draft for owner review.
+`data/runtime/`. A failed smoke or degraded benchmark blocks release until
+it is investigated and requalified.
 
-## Evidence retention and cleanup inventory
+## Evidence retention
 
-The 2026-10-14 hardening snapshot is local at
-`data/runtime/hardening-20261014/`. Its `baseline/` contains the original `049c19f`
-source ZIP, file hashes, API schema, offline test result and model/index inventory.
-`archive/removed/` preserves the removed files; `archive/inventory.json` records
-their SHA-256 values, and `archive/raw/` retains original audit artifacts and
-runtime snapshots. Back up this directory outside the checkout before discarding
-the working directory; it is not included in Git or distributions.
+Store qualification results, HTTP smoke evidence, source comparisons, model
+digests and input hashes under the ignored `data/runtime/` directory. Back up
+the evidence outside the checkout before deleting it. This directory is not
+included in Git or Python distributions.
 
-The source ZIP retains the original committed tree with Git checkout line-ending
-attributes. The 33 initially archived files retain their exact working-tree bytes;
-later test moves and wrapper removals are recoverable from the source ZIP and Git.
-
-| Disposition | Files / reason |
-| --- | --- |
-| Keep | K67 PDF, gold benchmark, baseline retrieval/generation, local launch/qualification scripts |
-| Archive and remove | `docs/qualification/` tracked bundle, `docs/research/`, old evaluation output; historical observations are not evidence for a new runtime |
-| Archive and remove | ARAGOG/CRAG/memory, their tests/dependencies, unused prompt files and paper downloader; no baseline callers |
-| Remove from release input | Unverified `data/raw/handbook.txt`; replace loader-test usage with synthetic temporary fixtures |
-| Replace | Historical evidence CI coupling with current offline checks and a standalone strict distribution verifier |
-| Preserve separately | Pre-existing untracked source-intake design/schema files, outside this release change |
-
-The historical verifier passed before cleanup. Its immutable snapshot at commit
-`049c19fefd91466f4aa040e38e3d0347b771e5f5` still verifies the historical bundle in a
-checkout of that commit with full Git history. It must not be used to certify the
-new runtime. Historical metrics and failures were not rewritten, and removing the
-files from HEAD does not erase previously published Git history. No old report is
-silently relabeled as current qualification.
-
-The first post-hardening run at `0765561` matched the historical automatic proxies
-but failed q15 source comparison and the HTTP scholarship check. Its benchmark,
-HTTP response, diagnosis and semantic review remain under the local snapshot.
-The owner authorized a bounded generation-instruction follow-up; it requires its
-own committed qualification. A later pass must not replace or hide those failures.
-
-The follow-up at `49c5d91` preserved the q15 conditions but failed source comparison
-for q13: the answer described the bookshop without its floor and building. This
-benchmark and semantic failure are also retained. A further instruction clarifies
-location answers, with bookshop and document-search regressions; it likewise needs
-qualification of its committed runtime.
+Historical qualifications remain associated with their original commits.
+Removed experimental code, research PDFs and raw evaluation artifacts can be
+recovered from Git history or the operator's local archive; do not use them as
+evidence that a later runtime is qualified. A new source, model, retrieval
+configuration or runtime revision requires new qualification.
 
 ## Processes, logs and recovery
 

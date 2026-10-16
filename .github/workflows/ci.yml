@@ -56,6 +56,14 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Reject transient release-tree artifacts
+        shell: bash
+        run: |
+          if git ls-files | grep -E '^(docs/(local|research|qualification)/|data/runtime/|data/benchmark/eval_results[^/]*[.]json$|[.]env$)'; then
+            echo "Transient or private artifacts must not be tracked" >&2
+            exit 1
+          fi
+          test -f .github/pull_request_template.md
       - name: Validate workflows with pinned actionlint
         shell: bash
         working-directory: ${{ runner.temp }}
