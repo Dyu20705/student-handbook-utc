@@ -7,9 +7,10 @@ Usage:
 
 import argparse
 import sys
+
 from student_handbook_rag.chain import StudentHandbookRAG
-from student_handbook_rag.retriever import BaselineRetriever
 from student_handbook_rag.config import RETRIEVAL_K
+from student_handbook_rag.retriever import BaselineRetriever
 
 
 def print_response(result: dict, debug: bool = False, retriever: BaselineRetriever = None):
@@ -19,13 +20,18 @@ def print_response(result: dict, debug: bool = False, retriever: BaselineRetriev
     print("Sources:")
     if result["sources"]:
         for s in result["sources"]:
-            print(f"  - {s['document']} | Page: {s['page']} (Book page: {s['book_page']}) | Section: {s['section']} | Score: {s['score']:.4f}")
+            print(
+                f"  - {s['document']} | Page: {s['page']} (Book page: {s['book_page']}) | Section: {s['section']} | Context rank: {s['context_rank']}"
+            )
     else:
         print("  (No relevant sources found)")
 
     if debug:
         print("\n--- Debug: Retrieved Chunks ---")
-        scored_pairs = [(doc, s["score"]) for doc, s in zip(result["retrieved_chunks"], result["sources"])]
+        # Sources are a cited subset, not a one-to-one map of all retrieved chunks.
+        scored_pairs = [
+            (doc, float(rank)) for rank, doc in enumerate(result["retrieved_chunks"], 1)
+        ]
         if retriever:
             print(retriever.format_retrieval_debug(result["query"], scored_pairs))
 
@@ -42,7 +48,7 @@ def main():
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Display detailed retrieved chunks, similarity scores, and metadata.",
+        help="Display retrieved chunks, context ranks, and local metadata.",
     )
     parser.add_argument(
         "-k",
@@ -53,15 +59,25 @@ def main():
     )
 
     args = parser.parse_args()
+    if not 1 <= args.top_k <= 10:
+        parser.error("--top-k must be between 1 and 10")
 
     print("[Init] Loading Student Handbook RAG...")
-    retriever = BaselineRetriever(k=args.top_k)
-    rag = StudentHandbookRAG(retriever=retriever)
+    try:
+        retriever = BaselineRetriever(k=args.top_k)
+        rag = StudentHandbookRAG(retriever=retriever)
+    except Exception as exc:
+        print(
+            f"Startup failed ({type(exc).__name__}). Run utc-doctor and utc-ingest.",
+            file=sys.stderr,
+        )
+        return 1
     print("[Init] System ready.\n")
 
     if args.query:
         result = rag.query(args.query, k=args.top_k)
         print_response(result, debug=args.debug, retriever=retriever)
+        return 1 if result.get("status") == "error" else 0
     else:
         print("--- Interactive Mode (type 'exit' to quit) ---")
         while True:
@@ -82,4 +98,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

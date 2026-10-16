@@ -1,29 +1,46 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "student-handbook-rag"
-version = "0.1.0"
+version = "0.2.0"
 description = "A lightweight RAG system for UTC student handbook"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.13"
 dependencies = [
-    "langchain",
-    "langchain-community",
-    "langchain-core",
-    "langchain-ollama",
-    "langchain-chroma",
-    "sentence-transformers",
-    "bs4",
-    "pytest",
-    "arxiv",
-    "pypdf",
+    "langchain-core>=1,<2",
+    "langchain-text-splitters>=1,<2",
+    "langchain-ollama>=1,<2",
+    "langchain-chroma>=1,<2",
+    "pypdf>=6,<7",
+    "filelock>=3.20,<4",
+    "fastapi>=0.115,<1",
+    "uvicorn>=0.34,<1",
+    "httpx>=0.28,<1",
+    "requests>=2.33,<3",
 ]
 
-[tool.setuptools.package-data]
-student_handbook_rag = ["prompts/*.txt"]
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.12,<1", "pip-audit>=2.9,<3"]
+
+[project.scripts]
+utc-ask = "student_handbook_rag.ask:main"
+utc-ingest = "student_handbook_rag.ingest:main"
+utc-serve = "student_handbook_rag.api:main"
+utc-doctor = "student_handbook_rag.doctor:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = ["integration: requires local Ollama models and an ingested handbook"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "B", "UP"]

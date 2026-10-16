@@ -7,21 +7,24 @@ Usage:
 import argparse
 import sys
 import time
+
 from student_handbook_rag.config import (
-    RAW_DATA_PATH,
-    CHROMA_BASELINE_DIR,
-    CHUNK_SIZE,
+    CHROMA_DEFAULT_DIR,
     CHUNK_OVERLAP,
+    CHUNK_SIZE,
+    RAW_DATA_PATH,
 )
 from student_handbook_rag.vectorstore import build_vector_store
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Ingest UTC Student Handbook into Chroma vector store.")
+    parser = argparse.ArgumentParser(
+        description="Ingest UTC Student Handbook into Chroma vector store."
+    )
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Force rebuild index from scratch (clears existing vector DB).",
+        help="Build a new index generation and publish only after success.",
     )
     parser.add_argument(
         "--data-path",
@@ -32,8 +35,8 @@ def main():
     parser.add_argument(
         "--persist-dir",
         type=str,
-        default=CHROMA_BASELINE_DIR,
-        help=f"Path to Chroma persistence directory (default: {CHROMA_BASELINE_DIR})",
+        default=CHROMA_DEFAULT_DIR,
+        help=f"Path to Chroma persistence directory (default: {CHROMA_DEFAULT_DIR})",
     )
     parser.add_argument(
         "--chunk-size",
@@ -70,6 +73,16 @@ def main():
         duration = time.time() - start_time
         print(f"\nIngestion completed in {duration:.2f}s.")
         print(f"Total indexed chunks: {total_docs}")
+        if args.data_path != RAW_DATA_PATH or args.persist_dir != CHROMA_DEFAULT_DIR:
+            from pathlib import Path
+
+            print("CLI path overrides apply only to this ingestion. Before doctor/ask/serve, set:")
+            print(f"RAG_DATA_PATH={Path(args.data_path).resolve()}")
+            print(f"RAG_CHROMA_DIR={Path(args.persist_dir).resolve()}")
+        if args.chunk_size != CHUNK_SIZE or args.chunk_overlap != CHUNK_OVERLAP:
+            print("Before doctor/ask/serve, match the ingestion chunk settings:")
+            print(f"RAG_CHUNK_SIZE={args.chunk_size}")
+            print(f"RAG_CHUNK_OVERLAP={args.chunk_overlap}")
     except Exception as e:
         print(f"Error: Ingestion failed: {e}", file=sys.stderr)
         sys.exit(1)

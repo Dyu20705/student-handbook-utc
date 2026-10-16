@@ -1,0 +1,14 @@
+include README.md CHANGELOG.md uv.lock .env.example
+recursive-include tests *.py
+include docs/architecture.md docs/api.md docs/configuration.md
+include docs/operations.md docs/security.md docs/limitations.md
+recursive-include scripts *.ps1
+include scripts/run_qualification.py scripts/check_distribution.py scripts/setup.sh
+prune .uv-cache
+prune data
+include data/README.md
+prune .venv
+
+prune docs/qualification
+prune docs/research
+prune docs/architecture

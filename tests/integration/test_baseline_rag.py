@@ -1,6 +1,9 @@
+import re
+
 import pytest
-from student_handbook_rag.retriever import BaselineRetriever
+
 from student_handbook_rag.chain import StudentHandbookRAG
+from student_handbook_rag.retriever import BaselineRetriever
 
 
 def test_baseline_retriever():
@@ -30,4 +33,50 @@ def test_baseline_rag_unanswerable():
     rag = StudentHandbookRAG()
     res = rag.query("Hôm nay căn tin trường UTC bán món gì?")
     assert res["is_insufficient_context"] is True
-    assert "không tìm thấy đủ thông tin" in res["answer"].lower() or "không" in res["answer"].lower()
+    assert (
+        "không tìm thấy đủ thông tin" in res["answer"].lower() or "không" in res["answer"].lower()
+    )
+
+
+@pytest.mark.parametrize(
+    ("question", "floors"),
+    [
+        ("Nhà sách cung cấp giáo trình, tài liệu tham khảo của Thư viện UTC nằm ở đâu?", [1]),
+        ("Dịch vụ tìm tin, tìm tài liệu theo yêu cầu của Thư viện UTC nằm ở đâu?", [6, 7]),
+    ],
+)
+def test_location_answer_includes_floor_and_building(question, floors):
+    """Location questions must answer where, rather than describe the service."""
+    result = StudentHandbookRAG().query(question)
+    answer = result["answer"].lower()
+    assert result["status"] == "answered"
+    assert re.search(r"\ba8\b", answer), answer
+    floor_groups = re.findall(r"\btầng\s+(\d+(?:\s*(?:,|và|&|[-–])\s*(?:tầng\s+)?\d+)*)", answer)
+    actual_floors = {int(n) for group in floor_groups for n in re.findall(r"\b\d+\b", group)}
+    assert set(floors) <= actual_floors, answer
+    assert 71 in {source["page"] for source in result["sources"]}
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Sinh viên hệ chính quy cần đáp ứng các điều kiện gì về học tập, rèn luyện và kỷ luật để được xét cấp học bổng khuyến khích học tập?",
+        "Để được xét học bổng khuyến khích học tập, sinh viên chính quy cần thỏa mãn những điều kiện nào? Nêu đủ cả yêu cầu về tín chỉ và điểm học phần.",
+        "Những điều kiện bắt buộc để xét học bổng khuyến khích học tập đối với sinh viên hệ chính quy là gì?",
+    ],
+)
+def test_scholarship_keeps_cross_page_thresholds(question):
+    """Regression for q15 omissions; full semantic review is still a separate gate."""
+    rag = StudentHandbookRAG()
+    result = rag.query(question)
+    answer = result["answer"].lower()
+    assert result["status"] == "answered"
+    assert "5,0" in answer or "5.0" in answer, answer
+    assert "15" in answer and "ngoại ngữ tăng cường" in answer
+    assert "lần thứ nhất" in answer or "lần đầu" in answer
+    assert "giáo dục thể chất" in answer and "giáo dục quốc phòng" in answer
+    assert "khá" in answer and "khiển trách" in answer
+    assert {45, 46} <= {source["page"] for source in result["sources"]}
+    assert {"sotaysvk67.pdf_p45_c0183", "sotaysvk67.pdf_p46_c0184"} <= {
+        source["chunk_id"] for source in result["sources"]
+    }
