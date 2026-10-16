@@ -116,6 +116,40 @@ def test_ready_requires_active_generation_and_source(engine, monkeypatch):
         engine.query.assert_not_called()
 
 
+@pytest.mark.parametrize("field", ["chunk_size", "chunk_overlap"])
+def test_chunk_drift_blocks_readiness_and_inference(engine, monkeypatch, tmp_path, field):
+    import json
+
+    from student_handbook_rag import vectorstore
+
+    manifest = {
+        "schema_version": 1,
+        "collection": "utc_handbook_" + "a" * 32,
+        "chunk_count": 2,
+        "embedding_model": vectorstore.EMBEDDING_MODEL,
+        "chunk_size": vectorstore.CHUNK_SIZE,
+        "chunk_overlap": vectorstore.CHUNK_OVERLAP,
+    }
+    manifest_path = tmp_path / "utc_handbook.manifest.json"
+    manifest_path.write_text(json.dumps(manifest))
+    monkeypatch.setattr(
+        "student_handbook_rag.api.read_manifest", lambda: vectorstore.read_manifest(tmp_path)
+    )
+    monkeypatch.setattr("student_handbook_rag.api.validate_source", lambda manifest: None)
+    engine.retriever.vector_db._collection.name = manifest["collection"]
+    engine.retriever.vector_db._collection.count.return_value = manifest["chunk_count"]
+    with TestClient(
+        create_app(lambda: engine, lambda: None), base_url="http://127.0.0.1"
+    ) as client:
+        assert client.get("/ready").status_code == 200
+        manifest[field] += 1
+        manifest_path.write_text(json.dumps(manifest))
+        assert client.get("/health").status_code == 200
+        assert client.get("/ready").status_code == 503
+        assert client.post("/ask", json={"question": "Học phí?"}).status_code == 503
+        engine.query.assert_not_called()
+
+
 def test_busy_inference_rejected_and_slot_released(client, engine):
     entered, release = threading.Event(), threading.Event()
     answer = engine.query.return_value

@@ -79,6 +79,10 @@ def main():
             print("CLI path overrides apply only to this ingestion. Before doctor/ask/serve, set:")
             print(f"RAG_DATA_PATH={Path(args.data_path).resolve()}")
             print(f"RAG_CHROMA_DIR={Path(args.persist_dir).resolve()}")
+        if args.chunk_size != CHUNK_SIZE or args.chunk_overlap != CHUNK_OVERLAP:
+            print("Before doctor/ask/serve, match the ingestion chunk settings:")
+            print(f"RAG_CHUNK_SIZE={args.chunk_size}")
+            print(f"RAG_CHUNK_OVERLAP={args.chunk_overlap}")
     except Exception as e:
         print(f"Error: Ingestion failed: {e}", file=sys.stderr)
         sys.exit(1)

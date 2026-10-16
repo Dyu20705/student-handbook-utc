@@ -78,6 +78,47 @@ def test_repeated_ingestion_is_idempotent(index_fixture):
     assert rebuilt._collection.count() == first._collection.count()
 
 
+@pytest.mark.parametrize("settings", [{"chunk_size": 700}, {"chunk_overlap": 50}])
+def test_chunk_setting_change_requires_explicit_rebuild(index_fixture, settings):
+    path, source, _ = index_fixture
+    vectorstore.build_vector_store(path, source)
+    previous = vectorstore.read_manifest(path)
+    with pytest.raises(vectorstore.IndexNotReadyError, match="incompatible"):
+        vectorstore.read_manifest(path, **settings)
+    for load_only in (True, False):
+        with pytest.raises(vectorstore.IndexNotReadyError, match="incompatible"):
+            vectorstore.build_vector_store(path, source, load_only=load_only, **settings)
+    assert vectorstore.read_manifest(path) == previous
+    rebuilt = vectorstore.build_vector_store(path, source, force_rebuild=True, **settings)
+    assert rebuilt._collection.name != previous["collection"]
+    for load_only in (True, False):
+        reopened = vectorstore.build_vector_store(path, source, load_only=load_only, **settings)
+        assert reopened._collection.name == rebuilt._collection.name
+
+
+def test_restarted_reader_rejects_environment_chunk_drift(index_fixture):
+    import os
+
+    path, source, _ = index_fixture
+    vectorstore.build_vector_store(path, source, chunk_size=600, chunk_overlap=100)
+    script = """
+import sys
+from student_handbook_rag.vectorstore import read_manifest, IndexNotReadyError
+try:
+    read_manifest(sys.argv[1])
+except IndexNotReadyError:
+    sys.exit(0)
+sys.exit('Reader accepted an incompatible index')
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, path],
+        env={**os.environ, "RAG_CHUNK_SIZE": "700", "RAG_CHUNK_OVERLAP": "100"},
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
 def test_manifest_publication_failure_preserves_reader(index_fixture, monkeypatch):
     path, source, _ = index_fixture
     vectorstore.build_vector_store(path, source)

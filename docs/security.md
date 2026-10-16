@@ -34,6 +34,12 @@ or accepting untrusted embedding configuration invalidates these exceptions and
 blocks release. Other vulnerabilities still fail the audit. The exceptions are
 not a claim that Chroma has no vulnerabilities.
 
+The unfiltered audit checked on 2026-10-16 returned five records for these four
+unique IDs: `PYSEC-2026-311` appeared twice with the same CVE/GHSA aliases.
+Thus an audit summary of `5 ignored` does not imply a fifth unique exception.
+Reconcile IDs and aliases when reviewing future audit output; do not infer safety
+from the count alone.
+
 ```powershell
 uv run --locked python -m pip_audit --local --skip-editable
 uv run --locked python -m pip_audit --local --skip-editable --ignore-vuln PYSEC-2026-311 --ignore-vuln PYSEC-2026-3814 --ignore-vuln PYSEC-2026-3815 --ignore-vuln PYSEC-2026-3813

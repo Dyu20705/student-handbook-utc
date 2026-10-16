@@ -44,5 +44,11 @@ root. Installed wheels contain code, not the PDF/benchmark; supply absolute path
 when running outside a source checkout.
 
 Source, embedding or chunk-setting changes require an explicit rebuild followed by
-an API restart. Model/prompt/retrieval changes require fresh benchmark and semantic
+an API restart. Readers reject manifests whose chunk size or overlap differs from
+their configuration; `/ready` and `/ask` fail with 503 if an active index becomes
+incompatible. Set `RAG_CHUNK_SIZE` and `RAG_CHUNK_OVERLAP` consistently for ingestion
+and serving. The ingestion flags `--chunk-size` and `--chunk-overlap` affect only
+that command, just like the path overrides.
+
+Model/prompt/retrieval changes require fresh benchmark and semantic
 review. The context size and reasoning flag are fixed baseline settings in code.

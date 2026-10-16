@@ -44,7 +44,13 @@ def _manifest_path(persist_dir, collection_name):
     return Path(persist_dir).resolve() / f"{collection_name}.manifest.json"
 
 
-def read_manifest(persist_dir=CHROMA_DEFAULT_DIR, collection_name="utc_handbook"):
+def read_manifest(
+    persist_dir=CHROMA_DEFAULT_DIR,
+    collection_name="utc_handbook",
+    *,
+    chunk_size=CHUNK_SIZE,
+    chunk_overlap=CHUNK_OVERLAP,
+):
     path = _manifest_path(persist_dir, collection_name)
     try:
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -52,6 +58,8 @@ def read_manifest(persist_dir=CHROMA_DEFAULT_DIR, collection_name="utc_handbook"
             manifest["schema_version"] != 1
             or manifest["chunk_count"] <= 0
             or manifest["embedding_model"] != EMBEDDING_MODEL
+            or manifest["chunk_size"] != chunk_size
+            or manifest["chunk_overlap"] != chunk_overlap
             or not re.fullmatch(
                 re.escape(collection_name) + r"_[0-9a-f]{32}", manifest["collection"]
             )
@@ -62,8 +70,10 @@ def read_manifest(persist_dir=CHROMA_DEFAULT_DIR, collection_name="utc_handbook"
         raise IndexNotReadyError("Index missing or incompatible; run utc-ingest --force") from exc
 
 
-def _open_index(persist_dir, collection_name, embedding):
-    manifest = read_manifest(persist_dir, collection_name)
+def _open_index(persist_dir, collection_name, embedding, chunk_size, chunk_overlap):
+    manifest = read_manifest(
+        persist_dir, collection_name, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
     db = Chroma(
         persist_directory=str(Path(persist_dir).resolve()),
         embedding_function=embedding,
@@ -102,12 +112,19 @@ def build_vector_store(
     embedding = get_embedding_function()
     path = _manifest_path(persist_dir, collection_name)
     if load_only:
-        validate_source(read_manifest(persist_dir, collection_name), data_path)
-        return _open_index(persist_dir, collection_name, embedding)
+        validate_source(
+            read_manifest(
+                persist_dir, collection_name, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+            ),
+            data_path,
+        )
+        return _open_index(persist_dir, collection_name, embedding, chunk_size, chunk_overlap)
     path.parent.mkdir(parents=True, exist_ok=True)
     with FileLock(str(path.parent / "ingest.lock"), timeout=0):
         if path.exists() and not force_rebuild:
-            manifest = read_manifest(persist_dir, collection_name)
+            manifest = read_manifest(
+                persist_dir, collection_name, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+            )
             source = Path(resolve_data_path(data_path))
             digest = hashlib.sha256(source.read_bytes()).hexdigest()
             if (
@@ -116,7 +133,7 @@ def build_vector_store(
                 or chunk_overlap != manifest["chunk_overlap"]
             ):
                 raise IndexNotReadyError("Source or chunk settings changed; run utc-ingest --force")
-            return _open_index(persist_dir, collection_name, embedding)
+            return _open_index(persist_dir, collection_name, embedding, chunk_size, chunk_overlap)
         if (path.parent / "chroma.sqlite3").exists() and not path.exists() and not force_rebuild:
             raise IndexNotReadyError("Unversioned index found; run utc-ingest --force")
         source = Path(resolve_data_path(data_path))
